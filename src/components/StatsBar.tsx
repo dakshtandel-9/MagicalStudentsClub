@@ -1,64 +1,46 @@
-import { stats, trust } from "@/content/site";
+import { stats } from "@/content/site";
 import { Card, IconChip } from "./ui/Card";
 import type { IconName } from "./ui/Icon";
-import { Reveal } from "./ui/Reveal";
-import { Section } from "./ui/Section";
-import { SectionHeading } from "./ui/SectionHeading";
 
+/**
+ * Sits inside the hero, directly beneath the hero content. Not a section of its
+ * own — it is part of the approved hero composition.
+ */
 export function StatsBar() {
   return (
-    <Section id="trust" labelledBy="trust-heading" fullscreen>
-      <Reveal>
-        <div className="flex justify-center">
-          <SectionHeading
-            eyebrow={trust.eyebrow}
-            title={<span id="trust-heading">{trust.heading}</span>}
-            subtitle={trust.intro}
-          />
-        </div>
-      </Reveal>
-
-      <Reveal delay={80}>
-        <Card className="mt-14 overflow-hidden lg:mt-16">
-          <dl className="grid grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, i) => (
-              <div
-                key={stat.label}
-                className={[
-                  "flex flex-col items-center p-7 text-center sm:p-8 lg:p-10",
-                  "border-line",
-                  i % 2 === 0 ? "border-r" : "",
-                  i < 2 ? "border-b lg:border-b-0" : "",
-                  "lg:border-b-0",
-                  i !== stats.length - 1 ? "lg:border-r" : "lg:border-r-0",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                <IconChip name={stat.icon as IconName} />
-                <dt className="sr-only">{stat.label}</dt>
-                <dd className="mt-5">
-                  <span className="font-display text-ink tabular block text-3xl leading-none font-bold sm:text-4xl lg:text-[2.75rem]">
-                    {stat.value}
-                  </span>
-                  <span className="text-ink mt-3 block text-sm font-medium">
-                    {stat.label}
-                  </span>
-                  <span className="text-muted mx-auto mt-2 block max-w-[15rem] text-[13px] leading-relaxed">
-                    {stat.detail}
-                  </span>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-      </Reveal>
-
-      <Reveal delay={140}>
-        <p className="text-muted mx-auto mt-12 max-w-2xl text-center text-[15px] leading-relaxed text-balance lg:mt-14">
-          {trust.statement}
-        </p>
-      </Reveal>
-    </Section>
+    <Card className="overflow-hidden">
+      <dl className="grid grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, i) => (
+          <div
+            key={stat.label}
+            className={[
+              "flex items-center gap-3.5 p-5 sm:p-6",
+              // Hairline separators: right edge except last in row, bottom on
+              // the first mobile row only.
+              "border-line",
+              i % 2 === 0 ? "border-r" : "",
+              i < 2 ? "border-b lg:border-b-0" : "",
+              "lg:border-b-0",
+              i !== stats.length - 1 ? "lg:border-r" : "lg:border-r-0",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <IconChip name={stat.icon as IconName} size="sm" />
+            <div className="min-w-0">
+              <dt className="sr-only">{stat.label}</dt>
+              <dd>
+                <span className="font-display text-ink tabular block text-xl leading-none font-bold sm:text-2xl">
+                  {stat.value}
+                </span>
+                <span className="text-muted mt-1.5 block text-xs leading-tight sm:text-[13px]">
+                  {stat.label}
+                </span>
+              </dd>
+            </div>
+          </div>
+        ))}
+      </dl>
+    </Card>
   );
 }

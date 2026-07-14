@@ -7,7 +7,7 @@ import { Eyebrow, Mark } from "./ui/SectionHeading";
 
 export function LearningMethodSection() {
   return (
-    <Section id="method" labelledBy="method-heading" fullscreen>
+    <Section id="method" labelledBy="method-heading" card>
       <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         {/* 5R panel. Labels only — the guide defines no copy for each R, and
             inventing it would mean inventing the method. */}

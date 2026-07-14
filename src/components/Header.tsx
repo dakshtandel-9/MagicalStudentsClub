@@ -8,16 +8,13 @@ import { ButtonLink } from "./ui/Button";
 import { Container } from "./ui/Section";
 import { WhatsAppGlyph } from "./ui/WhatsAppGlyph";
 
+/**
+ * The navigation bar at the top of the hero card. It is a fixed part of that
+ * card — ordinary content in the flow, not a floating bar — so it scrolls away
+ * with the hero and does not follow the page or reappear.
+ */
 export function Header() {
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   // Escape closes the menu, and the page behind it must not scroll while open.
   useEffect(() => {
@@ -37,13 +34,7 @@ export function Header() {
   }, [open]);
 
   return (
-    <header
-      className={`sticky top-0 z-50 transition-colors duration-200 ${
-        scrolled
-          ? "border-line bg-background/80 border-b backdrop-blur-md"
-          : "border-b border-transparent"
-      }`}
-    >
+    <header className="relative z-20">
       <Container>
         <div className="flex h-16 items-center justify-between gap-6 lg:h-[72px]">
           <Link
@@ -119,7 +110,10 @@ export function Header() {
       {open ? (
         <div
           id="mobile-menu"
-          className="border-line bg-background/95 border-t backdrop-blur-md xl:hidden"
+          // Absolute so opening the menu does not push the hero content down and
+          // break the card's fixed height. Capped and scrollable so a long menu
+          // stays reachable on a short screen.
+          className="border-line bg-background/95 absolute inset-x-0 top-full z-30 max-h-[70dvh] overflow-y-auto border-b backdrop-blur-md xl:hidden"
         >
           <Container>
             <nav aria-label="Mobile" className="py-4">

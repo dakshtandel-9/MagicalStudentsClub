@@ -17,11 +17,25 @@
 }
 
 @layer base {
+  /*
+   * No `scroll-snap-type` here, deliberately.
+   *
+   * Snapping settles the page only *after* native momentum has spent itself, so
+   * one hard flick still sails past several cards before snapping back to the
+   * nearest — the opposite of one-gesture-one-card. CardStack therefore takes
+   * the wheel itself and drives the scroll, and a snap container would only
+   * fight it for the final position.
+   */
   html {
     scroll-behavior: smooth;
     /* Decorative glows are deliberately oversized and bleed past the layout.
-       They must never be able to widen the page or create a scrollbar. */
-    overflow-x: hidden;
+       They must never be able to widen the page or create a scrollbar.
+       `clip` rather than `hidden`: `hidden` makes this a scroll container,
+       which would break `position: sticky` for the stacked section cards.
+       Both axes are declared because a lone `overflow-x: clip` against a
+       `visible` y-axis is computed back to `hidden` by the UA. */
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   body {
@@ -53,6 +67,80 @@
 }
 
 @layer components {
+  /*
+   * Pink glow around the section panels.
+   *
+   * Not a box-shadow. The panels are `bg-background` — the same near-black as
+   * the page — and they stack and overlap on scroll, so an opaque card would
+   * paint straight over the shadow of the card behind it. Instead the glow is a
+   * real painted layer sitting *behind* the panel: a ::before inset negatively
+   * on all four sides, filled with the brand pink, blurred, and pushed to a
+   * negative z-index so the opaque panel covers its middle and only the bloom
+   * spilling past the border remains visible.
+   *
+   * The element that carries this must therefore establish a stacking context
+   * (`isolate`) and must not be `overflow: hidden`, or the bloom is clipped away
+   * — hence the wrapper divs around the section shells.
+   *
+   * Panels only. The cards *inside* a section deliberately have no glow: the
+   * page needs one ring of light per screen, and haloing every nested box turns
+   * the interiors magenta.
+   *
+   * Which edges glow is opt-in, because the panels stack:
+   *   - default        top edge only — the leading edge of the card as it rides up.
+   *   - .glow-x        + left and right. The hero only: it is the one panel seen
+   *                    whole, against page background on both sides.
+   *   - .glow-y        + bottom. The footer only: the last card, with nothing
+   *                    stacked below to sandwich the bloom into a seam.
+   *
+   * An edge is switched off by pulling that side of the layer *inside* the panel
+   * (a positive inset), where the opaque surface hides it.
+   */
+  .glow-lg {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .glow-lg::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--color-primary);
+    top: -4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    filter: blur(22px);
+    opacity: 0.22;
+    transition: opacity 0.35s ease-out;
+  }
+
+  .glow-lg.glow-x::before {
+    left: -4px;
+    right: -4px;
+  }
+
+  .glow-lg.glow-y::before {
+    bottom: -4px;
+  }
+
+  /*
+   * A parked card douses its glow.
+   *
+   * The bloom is the leading edge of a card riding up the screen. Once the card
+   * has reached the top and stopped, the next card slides over it and that same
+   * bloom is trapped in the seam between the two panels — a magenta line, not a
+   * halo. `data-parked` is set by StackItem the moment a card sticks, and the
+   * glow fades out.
+   *
+   * The hero is the exception, and gets no flag: it is parked from the first
+   * paint and is the one panel meant to be seen whole and lit on every side.
+   */
+  [data-parked] .glow-lg::before {
+    opacity: 0;
+  }
+
   /*
    * The recall spine — the signature device.
    * A hairline that runs through the process sections: dotted where a step is

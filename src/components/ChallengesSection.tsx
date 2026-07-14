@@ -7,7 +7,7 @@ import { Mark, SectionHeading } from "./ui/SectionHeading";
 
 export function ChallengesSection() {
   return (
-    <Section id="challenges" labelledBy="challenges-heading" fullscreen>
+    <Section id="challenges" labelledBy="challenges-heading" card>
       <Reveal>
         <div className="flex justify-center">
           <SectionHeading

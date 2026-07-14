@@ -8,7 +8,7 @@ import { Eyebrow } from "./ui/SectionHeading";
 
 export function CoachSection() {
   return (
-    <Section id="coach" labelledBy="coach-heading" fullscreen>
+    <Section id="coach" labelledBy="coach-heading" card>
       <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
         <Reveal>
           <div className="relative mx-auto max-w-[420px]">

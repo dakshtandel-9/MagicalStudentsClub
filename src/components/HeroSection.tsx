@@ -4,11 +4,24 @@ import { hero, whatsappHref } from "@/content/site";
 import { ButtonLink } from "./ui/Button";
 import { Container } from "./ui/Section";
 import { WhatsAppGlyph } from "./ui/WhatsAppGlyph";
+import { StatsBar } from "./StatsBar";
+import { Header } from "./Header";
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden pt-8 pb-16 sm:pt-14 lg:pt-16 lg:pb-20">
-      {/* Single soft pink glow behind the portrait. The only glow on the page. */}
+    // Card frame matches the stacked sections, with the same all-round margin.
+    // The nav is the card's own top row — a fixed part of the hero, not a
+    // floating bar. Exactly one viewport tall, margins included.
+    // The glow rides on this wrapper rather than the <section>: the section is
+    // overflow-hidden and opaque, so a glow on it would be clipped and hidden.
+    <div className="bg-background">
+      {/* glow-x: the hero is the one panel seen whole against the page on both
+          sides, so it glows left and right as well as on top. */}
+      <div className="glow-lg glow-x mx-3 my-3 rounded-[20px] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]">
+        <section className="border-line bg-background relative flex h-full flex-col overflow-hidden rounded-[20px] border">
+        <Header />
+
+        {/* Single soft pink glow behind the portrait. The only glow on the page. */}
       <div
         aria-hidden
         className="pointer-events-none absolute top-[-6rem] right-[-10rem] h-[38rem] w-[38rem] rounded-full opacity-60 blur-[110px]"
@@ -18,7 +31,9 @@ export function HeroSection() {
         }}
       />
 
-      <Container className="relative">
+      {/* Fills the height left by the nav row, so the hero content sits centred
+          in the card rather than pinned under the nav. */}
+      <Container className="relative flex flex-1 flex-col justify-center py-12 lg:min-h-0 lg:py-8">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
           <div className="order-2 lg:order-1">
             {/* Four deliberate lines: the WHAT/HOW contrast has to land on its
@@ -96,7 +111,13 @@ export function HeroSection() {
             </div>
           </div>
         </div>
+
+        <div className="mt-14 lg:mt-16">
+          <StatsBar />
+        </div>
       </Container>
-    </section>
+        </section>
+      </div>
+    </div>
   );
 }

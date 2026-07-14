@@ -109,8 +109,8 @@ function WrittenTestimonial({
 
 export function ResultsSection() {
   return (
-    <Section id="results" labelledBy="results-heading" fullscreen>
-      <div className="grid gap-14 lg:grid-cols-2 lg:gap-16">
+    <Section id="results" labelledBy="results-heading" card>
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
         <div>
           <Reveal>
             <h2
@@ -124,10 +124,10 @@ export function ResultsSection() {
             </p>
           </Reveal>
 
-          <div className="mt-10 grid gap-4">
+          <div className="mt-7 grid gap-3">
             {results.map((result, i) => (
               <Reveal key={result.title} delay={i * 80}>
-                <Card hover className="flex items-start gap-4 p-6">
+                <Card hover className="flex items-start gap-4 p-5">
                   <IconChip name={result.icon as IconName} size="sm" />
                   <div>
                     <h3 className="text-ink text-[15px] font-semibold">
@@ -143,7 +143,7 @@ export function ResultsSection() {
           </div>
 
           <Reveal delay={160}>
-            <div className="mt-8">
+            <div className="mt-6">
               <ButtonLink href="/results" variant="secondary">
                 View All Results
                 <ArrowRight className="size-4" aria-hidden />
@@ -179,7 +179,7 @@ export function ResultsSection() {
           </Reveal>
 
           <Reveal delay={160}>
-            <div className="mt-8">
+            <div className="mt-6">
               <ButtonLink href="/testimonials" variant="secondary">
                 View All Testimonials
                 <ArrowRight className="size-4" aria-hidden />

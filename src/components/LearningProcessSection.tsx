@@ -7,7 +7,7 @@ import { SectionHeading } from "./ui/SectionHeading";
 
 export function LearningProcessSection() {
   return (
-    <Section id="how-it-works" labelledBy="how-heading" fullscreen>
+    <Section id="how-it-works" labelledBy="how-heading" card>
       <Reveal>
         <div className="flex justify-center">
           <SectionHeading

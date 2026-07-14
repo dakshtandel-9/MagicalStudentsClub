@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="text-primary mb-4 text-xs font-medium tracking-[0.18em] uppercase">
+    <p className="text-primary mb-3 text-xs font-medium tracking-[0.18em] uppercase">
       {children}
     </p>
   );
@@ -30,7 +30,7 @@ export function SectionHeading({
         {title}
       </Tag>
       {subtitle ? (
-        <p className="text-muted mt-4 text-base leading-relaxed text-pretty">
+        <p className="text-muted mt-3 text-[15px] leading-relaxed text-pretty">
           {subtitle}
         </p>
       ) : null}
