@@ -2,19 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { GATE_OPENED_EVENT } from "./EnterGate";
-
-/** One narration track per stacked section, in deck order. */
-const TRACKS = [
-  "/Audio/section1.mp3",
-  "/Audio/section2.mp3",
-  "/Audio/section3.mp3",
-  "/Audio/section4.mp3",
-  "/Audio/section5.mp3",
-  "/Audio/section6.mp3",
-  "/Audio/section7.mp3",
-  "/Audio/section8.mp3",
-  "/Audio/section9.mp3",
-] as const;
+import { SECTION_TRACKS } from "@/content/narrationTracks";
 
 const MUTE_STORAGE_KEY = "msc:narration-muted";
 
@@ -230,14 +218,18 @@ export function SectionAudioPlayer({
   return (
     <NarrationContext.Provider value={{ register }}>
       <MuteContext.Provider value={{ muted, toggle }}>
-        {TRACKS.map((src, i) => (
+        {SECTION_TRACKS.map((src, i) => (
           <audio
             key={src}
             ref={(el) => {
               audios.current[i] = el;
             }}
             src={src}
-            preload="none"
+            // The entrance gate holds the door shut until every track here has
+            // buffered (see EnterGate's preload check), so eager loading is
+            // safe rather than wasteful — by the time these can play, the
+            // browser has usually already cached the bytes from that check.
+            preload="auto"
           />
         ))}
         {children}

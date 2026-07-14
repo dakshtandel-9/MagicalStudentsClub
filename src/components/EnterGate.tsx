@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { ALL_TRACKS } from "@/content/narrationTracks";
 
 /** How long the two halves take to clear the screen. Matches the CSS duration below. */
 const OPEN_MS = 900;
@@ -14,10 +15,13 @@ const OPEN_MS = 900;
 const MIN_LOAD_MS = 900;
 
 /**
- * A ceiling on it too. A single slow image must never hold the site hostage: if
- * `load` has not fired by now, the gate stops waiting and gets on with it.
+ * A ceiling on it too. A single slow image — or, now, a slow narration track —
+ * must never hold the site hostage: if loading has not finished by now, the
+ * gate stops waiting and gets on with it. Ten audio files (~1.4MB total) on a
+ * poor connection can genuinely take a few seconds, so this is longer than a
+ * page-load-only cap would need to be.
  */
-const MAX_LOAD_MS = 6000;
+const MAX_LOAD_MS = 10000;
 
 /** The greeting is played brisk rather than at its recorded pace. */
 const AUDIO_RATE = 1.25;
@@ -107,32 +111,80 @@ export function EnterGate() {
   }, [gone]);
 
   // Loading → greeting. Held for at least MIN_LOAD_MS and at most MAX_LOAD_MS,
-  // whatever the network does in between.
+  // and until both the page itself and every narration track (the welcome
+  // greeting plus all nine section tracks) have finished buffering — whatever
+  // the network does in between. On a fast local connection all of this
+  // resolves near-instantly and is invisible; on a slower deployed host it is
+  // exactly the wait that keeps the hero narration from stuttering the moment
+  // the door opens.
   useEffect(() => {
     if (phase !== "loading") return;
 
     const started = Date.now();
     let min: number | undefined;
+    let pageLoaded = false;
+    let audioLoaded = false;
 
-    const done = () => {
+    const maybeDone = () => {
+      if (!pageLoaded || !audioLoaded) return;
       // Serve out whatever is left of the minimum before moving on, so a warm
       // cache does not flash the curtain past the eye.
       const remaining = Math.max(0, MIN_LOAD_MS - (Date.now() - started));
       min = window.setTimeout(() => setPhase("greeting"), remaining);
     };
 
+    const onPageLoaded = () => {
+      pageLoaded = true;
+      maybeDone();
+    };
+
     // `load` has already fired if the bundle hydrated after it — in that case it
     // will never fire again, and waiting for it would hang the gate forever.
     if (document.readyState === "complete") {
-      done();
+      onPageLoaded();
     } else {
-      window.addEventListener("load", done, { once: true });
+      window.addEventListener("load", onPageLoaded, { once: true });
     }
 
+    // One throwaway `Audio()` per track, purely to ask the browser to fetch
+    // and buffer it — the real `<audio>` elements the gate and the section
+    // player render pick these bytes back up from the browser's HTTP cache
+    // rather than fetching a second time. `canplaythrough` means enough is
+    // buffered to play the whole file without stalling; `error` (a missing or
+    // broken file) counts the same as settled, so one bad track cannot hang
+    // the gate forever.
+    const preloaders = ALL_TRACKS.map((src) => {
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = src;
+      return audio;
+    });
+    let settled = 0;
+    const onTrackSettled = () => {
+      settled += 1;
+      if (settled >= preloaders.length) {
+        audioLoaded = true;
+        maybeDone();
+      }
+    };
+    preloaders.forEach((audio) => {
+      audio.addEventListener("canplaythrough", onTrackSettled, { once: true });
+      audio.addEventListener("error", onTrackSettled, { once: true });
+    });
+
+    // Whichever of the two is slower, this cap still wins: a bad connection
+    // must never strand the visitor behind the curtain indefinitely.
     const cap = window.setTimeout(() => setPhase("greeting"), MAX_LOAD_MS);
 
     return () => {
-      window.removeEventListener("load", done);
+      window.removeEventListener("load", onPageLoaded);
+      preloaders.forEach((audio) => {
+        audio.removeEventListener("canplaythrough", onTrackSettled);
+        audio.removeEventListener("error", onTrackSettled);
+        // Stops an in-flight fetch from a gate the visitor has already
+        // navigated away from, e.g. a fast route change in dev.
+        audio.src = "";
+      });
       window.clearTimeout(min);
       window.clearTimeout(cap);
     };
