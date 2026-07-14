@@ -24,18 +24,32 @@ const DESKTOP = "(min-width: 1024px)";
 const TRAVEL_MS = 620;
 
 /**
- * Wheel deltas below this are ignored entirely — trackpad momentum tails off in
- * a long drizzle of 1–3px events, and without a floor those tails would each
- * read as a fresh gesture and run the deck away.
+ * Wheel deltas below this can keep a gesture alive but never start one —
+ * trackpad momentum tails off in a long drizzle of 1–3px events, and a floor
+ * stops that drizzle from ever counting as a fresh instruction.
  */
 const WHEEL_THRESHOLD = 4;
 
 /**
  * A quiet gap that means "the fingers have left the trackpad". Momentum events
- * arrive in a continuous stream, so an unbroken stream is still *one* gesture no
- * matter how long it lasts; only a real pause starts a new one.
+ * arrive in a stream — the sub-threshold drizzle keeps the timer refreshed —
+ * so an unbroken stream is still *one* gesture no matter how long or hard it
+ * is. Short, deliberately: a pause is only one of three ways a new gesture is
+ * recognised (see the reversal and surge rules in the handler), and a long gap
+ * here punishes a mouse wheel, whose notches arrive as separate events a
+ * couple of hundred milliseconds apart with no drizzle between them.
  */
-const GESTURE_GAP_MS = 140;
+const GESTURE_GAP_MS = 160;
+
+/**
+ * A delta that at least doubles the previous event's and clears this floor is
+ * fresh finger input, however recently the stream last spoke: momentum only
+ * ever decays, so a surge cannot come from a tail. This is what lets a reader
+ * step deliberately from card to card without having to wait out the previous
+ * flick's dying drizzle. Above the jitter of a tail's small values, so a
+ * 2px-to-5px wobble can never qualify.
+ */
+const SURGE_FLOOR = WHEEL_THRESHOLD * 3;
 
 /**
  * How long the deck stays shut after a card lands, on top of the glide itself.
@@ -53,6 +67,25 @@ const REST_MS = 0;
  * progress; short enough that a half-scrolled card is never left on screen.
  */
 const SETTLE_MS = 120;
+
+/**
+ * The trip back to the hero crosses the whole deck, not one card, so it is given
+ * a longer glide — at the one-card speed the journey reads as a lurch.
+ */
+const HOME_TRAVEL_MS = 900;
+
+/**
+ * Asks the deck to glide home to the hero. Anything outside CardStack that wants
+ * to send the page to the top must fire this rather than scrolling itself: the
+ * deck owns the scroll position, and a raw scrollTo would race the wheel handler
+ * and then be pulled back by the off-pin safety net.
+ */
+export const STACK_HOME_EVENT = "cardstack:home";
+
+/** Fire {@link STACK_HOME_EVENT}. */
+export function scrollStackHome() {
+  window.dispatchEvent(new Event(STACK_HOME_EVENT));
+}
 
 type Registry = {
   register: (el: HTMLElement) => () => void;
@@ -95,6 +128,22 @@ export function CardStack({ children }: { children: ReactNode }) {
   const locked = useRef(false);
   const unlockAt = useRef<number | undefined>(undefined);
   const lastWheel = useRef(0);
+  // Direction of the gesture being served: +1 down, -1 up, 0 before the first.
+  // Momentum decays but never reverses, so a sign flip is always a human.
+  const lastDir = useRef(0);
+  // Magnitude of the previous wheel event, drizzle included — the baseline the
+  // surge rule measures fresh input against.
+  const lastMag = useRef(0);
+  // The card the deck last sent itself to, and therefore the one it steps from.
+  //
+  // The deck cannot ask the DOM where it is: `locked` is released on a timer, and
+  // a smooth scroll routinely outlives that timer on a tall card. Measuring at
+  // that moment reads the *coasting* scroll position — already past the current
+  // card's pin line — so the next step is counted from the card below and one
+  // card is skipped. Remembering the destination is exact whether the glide has
+  // finished or not. `undefined` means "the deck has not moved itself yet", so
+  // the first step measures instead.
+  const parked = useRef<number | undefined>(undefined);
 
   const register = useCallback((el: HTMLElement) => {
     const list = sentinels.current;
@@ -136,27 +185,59 @@ export function CardStack({ children }: { children: ReactNode }) {
             : null;
       if (el?.closest("[data-stack-scrollable]")) return;
 
-      if (Math.abs(e.deltaY) < WHEEL_THRESHOLD) return;
-
       // The deck owns the wheel: never let the page free-scroll underneath.
+      // Every event, however small — the 1–3px momentum drizzle would
+      // otherwise drift the page off-pin and leave the safety net to snap it
+      // back, a wobble the reader can see.
       e.preventDefault();
 
+      // Firefox reports a plain mouse wheel in lines (deltaMode 1), not pixels
+      // — a couple of "3"s that a pixel threshold would swallow whole.
+      const dy =
+        e.deltaY *
+        (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
+
+      const mag = Math.abs(dy);
       const now = e.timeStamp;
-      const continuing = now - lastWheel.current < GESTURE_GAP_MS;
+      const paused = now - lastWheel.current >= GESTURE_GAP_MS;
+      // Always refreshed, even for sub-threshold drizzle and while the deck is
+      // locked mid-glide: an unbroken stream must read as one gesture for its
+      // whole life, or the sparse end of a hard flick's tail counts as a second
+      // instruction and one long scroll runs the deck two cards.
       lastWheel.current = now;
 
-      // `continuing` swallows the momentum tail of the gesture already being
-      // served, so an unbroken stream of events stays one instruction.
-      if (continuing) return;
+      // Too small to be an instruction — but it has kept the gesture alive
+      // above and sets the surge baseline below, which is its whole job.
+      if (mag < WHEEL_THRESHOLD) {
+        lastMag.current = mag;
+        return;
+      }
 
-      go(e.deltaY > 0 ? 1 : -1);
+      const dir = dy > 0 ? 1 : -1;
+      // Momentum cannot change sign and cannot grow, so either one is
+      // certainly a new gesture and is served at once — making it wait out the
+      // gap would leave the reader feeling ignored.
+      const reversed = lastDir.current !== 0 && dir !== lastDir.current;
+      const surged = mag >= SURGE_FLOOR && mag > lastMag.current * 2;
+      lastDir.current = dir;
+      lastMag.current = mag;
+
+      // None of the three signs of a new gesture: this is the tail of the one
+      // already served, whatever its length or force — swallow it.
+      if (!paused && !reversed && !surged) return;
+
+      go(dir);
     };
 
     /**
      * The index of the card currently at the pin: the last sentinel at or above
      * the pin line. The epsilon absorbs sub-pixel rounding at rest.
+     *
+     * Only honest when the page is at rest. Mid-glide it reports whatever card
+     * the scroll happens to have reached, so the deck reads {@link parked}
+     * instead and keeps this for scrolls it did not itself initiate.
      */
-    const currentIndex = () => {
+    const measuredIndex = () => {
       let current = 0;
       sentinels.current.forEach((el, i) => {
         if (el.getBoundingClientRect().top <= STICKY_TOP_PX + 2) current = i;
@@ -172,14 +253,22 @@ export function CardStack({ children }: { children: ReactNode }) {
       const list = sentinels.current;
       if (!list.length) return;
 
-      const next = currentIndex() + step;
+      // Step from where the deck last *sent* itself, not from where the page
+      // happens to be — see `parked`. Falls back to measuring only when the deck
+      // has not moved itself yet, or when something else moved the page and the
+      // safety net handed control back with no remembered card.
+      const from = parked.current ?? measuredIndex();
+      const next = from + step;
       if (next < 0 || next >= list.length) return; // at an end: nowhere to go
 
       scrollToCard(next);
     };
 
-    /** Glide to card `i`, pin it, then hold the deck shut for the rest period. */
-    const scrollToCard = (i: number) => {
+    /**
+     * Glide to card `i`, pin it, then hold the deck shut for the rest period.
+     * `travelMs` overrides the glide length for journeys longer than one card.
+     */
+    const scrollToCard = (i: number, travelMs = TRAVEL_MS) => {
       const el = sentinels.current[i];
       if (!el) return;
 
@@ -194,10 +283,14 @@ export function CardStack({ children }: { children: ReactNode }) {
       );
 
       locked.current = true;
+      // Recorded before the glide, not after it: this is the deck's answer to
+      // "which card are we on", and the next gesture may arrive while the page
+      // is still coasting towards it.
+      parked.current = i;
 
       // Reduced motion gets the same one-card step and the same rest afterwards
       // — it simply arrives instantly instead of gliding.
-      const travel = reduced.matches ? 0 : TRAVEL_MS;
+      const travel = reduced.matches ? 0 : travelMs;
       window.scrollTo({
         top: to,
         behavior: reduced.matches ? "auto" : "smooth",
@@ -268,6 +361,19 @@ export function CardStack({ children }: { children: ReactNode }) {
         const list = sentinels.current;
         if (!list.length) return;
 
+        // At the very bottom the last card cannot reach the pin — the page runs
+        // out of scroll first. That shortfall is not a half-scroll, and trying
+        // to "fix" it would mean scrolling against the end of the document on
+        // every settle. It is as parked as it can be, on the last card: say so,
+        // and leave the scroll alone. (Measuring here would name some earlier
+        // card as "nearest the pin", which is true and useless — the deck is on
+        // the last one, and the next step up must come from there.)
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        if (window.scrollY >= max - 2) {
+          parked.current = list.length - 1;
+          return;
+        }
+
         // Nearest sentinel to the pin line, by absolute distance.
         let nearest = 0;
         let best = Infinity;
@@ -279,28 +385,47 @@ export function CardStack({ children }: { children: ReactNode }) {
           }
         });
 
+        // Whatever moved the page, it has come to rest on `nearest` — so that is
+        // the card the deck steps from now, including in the branch below that
+        // makes no correction. Leaving the old value would step from a card that
+        // is no longer on screen.
+        parked.current = nearest;
+
         // Already parked (within a pixel or two): nothing to correct.
         if (best <= 2) return;
 
-        // At the very bottom the last card cannot reach the pin — the page runs
-        // out of scroll first. That shortfall is not a half-scroll, and trying
-        // to "fix" it would mean scrolling against the end of the document on
-        // every settle. It is as parked as it can be; leave it.
-        const max = document.documentElement.scrollHeight - window.innerHeight;
-        if (window.scrollY >= max - 2) return;
-
         scrollToCard(nearest);
       }, SETTLE_MS);
+    };
+
+    // The back-to-top button lives outside the deck, so it asks for the journey
+    // by event rather than scrolling the page itself — a raw scrollTo would race
+    // the wheel handler and then be "corrected" by the safety net above.
+    //
+    // The trip home crosses the whole deck rather than one card, so it is given
+    // a longer glide; at the one-card speed it would be a lurch.
+    const onHome = () => {
+      if (!desktop.matches) {
+        // Below lg there is no deck — just go.
+        window.scrollTo({
+          top: 0,
+          behavior: reduced.matches ? "auto" : "smooth",
+        });
+        return;
+      }
+      scrollToCard(0, HOME_TRAVEL_MS);
     };
 
     // Not passive: the handlers must be able to preventDefault the page scroll.
     window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener(STACK_HOME_EVENT, onHome);
     return () => {
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener(STACK_HOME_EVENT, onHome);
       window.clearTimeout(unlockAt.current);
       window.clearTimeout(idle);
     };

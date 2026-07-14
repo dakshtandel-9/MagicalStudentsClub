@@ -21,9 +21,14 @@ export function ChallengesSection() {
         </div>
       </Reveal>
 
+      {/* `items-stretch` is the grid default, so every Reveal is already the
+          height of the tallest in its row — but a Reveal is a plain div that
+          sizes to its child, so the stretch stopped there and the card inside
+          kept its own text height. `h-full` on the wrapper passes the row height
+          down to the card, which fills it. */}
       <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:mt-16 lg:grid-cols-3">
         {challenges.map((item, i) => (
-          <Reveal key={item.title} delay={i * 80}>
+          <Reveal key={item.title} delay={i * 80} className="h-full">
             <FeatureCard
               icon={item.icon as IconName}
               title={item.title}

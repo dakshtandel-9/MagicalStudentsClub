@@ -1,4 +1,4 @@
-import { ArrowRight, Play, Quote } from "lucide-react";
+import { ArrowRight, Play, Quote, Star } from "lucide-react";
 import Image from "next/image";
 import {
   results,
@@ -24,7 +24,7 @@ function VideoTestimonial({
 }) {
   if (item.placeholder || !item.youtubeId) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-dashed" contentClassName="p-0">
         <div className="flex aspect-video flex-col items-center justify-center gap-2 p-4 text-center">
           <span className="border-line text-muted inline-flex size-10 items-center justify-center rounded-full border">
             <Play className="size-4" aria-hidden />
@@ -37,7 +37,10 @@ function VideoTestimonial({
   }
 
   return (
-    <Card className="group relative overflow-hidden">
+    // `overflow-hidden` dropped: it would clip the card's outer bloom. The
+    // thumbnail is still clipped to the rounded corners — Card does that on its
+    // inner wrapper, inside the glow layers.
+    <Card className="group relative" contentClassName="p-0">
       <a
         href={`https://www.youtube.com/watch?v=${item.youtubeId}`}
         target="_blank"
@@ -81,7 +84,7 @@ function WrittenTestimonial({
 }) {
   if (item.placeholder || !item.quote) {
     return (
-      <Card className="border-dashed p-6">
+      <Card className="border-dashed" contentClassName="p-6">
         <Quote className="text-muted/40 size-6" aria-hidden />
         <p className="text-muted mt-4 text-sm">
           Written testimonial
@@ -93,15 +96,42 @@ function WrittenTestimonial({
     );
   }
 
+  const rating = "rating" in item ? item.rating : null;
+  const initials = item.name
+    ?.split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2);
+
   return (
-    <Card className="p-6">
+    <Card contentClassName="p-6">
       <Quote className="text-primary size-6" aria-hidden />
       <blockquote className="text-ink mt-4 text-[15px] leading-relaxed">
         {item.quote}
       </blockquote>
-      <footer className="mt-4">
-        <p className="text-ink text-sm font-medium">{item.name}</p>
-        {item.role ? <p className="text-muted text-xs">{item.role}</p> : null}
+      <footer className="mt-4 flex items-center gap-3">
+        {initials ? (
+          <span className="border-primary/40 text-ink inline-flex size-10 shrink-0 items-center justify-center rounded-full border text-sm font-semibold">
+            {initials}
+          </span>
+        ) : null}
+        <div>
+          <p className="text-ink text-sm font-medium">{item.name}</p>
+          {item.role ? (
+            <p className="text-muted text-xs">{item.role}</p>
+          ) : null}
+          {rating ? (
+            <div className="mt-1 flex gap-0.5">
+              {Array.from({ length: rating }).map((_, i) => (
+                <Star
+                  key={i}
+                  className="fill-primary text-primary size-3.5"
+                  aria-hidden
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       </footer>
     </Card>
   );
@@ -127,7 +157,7 @@ export function ResultsSection() {
           <div className="mt-7 grid gap-3">
             {results.map((result, i) => (
               <Reveal key={result.title} delay={i * 80}>
-                <Card hover className="flex items-start gap-4 p-5">
+                <Card hover contentClassName="flex items-start gap-4 p-5">
                   <IconChip name={result.icon as IconName} size="sm" />
                   <div>
                     <h3 className="text-ink text-[15px] font-semibold">

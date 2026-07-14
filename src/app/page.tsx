@@ -8,7 +8,12 @@ import { ResultsSection } from "@/components/ResultsSection";
 import { FAQSection } from "@/components/FAQSection";
 import { Footer } from "@/components/Footer";
 import { WhatsAppFloatingButton } from "@/components/WhatsAppFloatingButton";
+import { EnterGate } from "@/components/EnterGate";
 import { CardStack, StackItem } from "@/components/ui/CardStack";
+import {
+  SectionAudioPlayer,
+  NarrationSection,
+} from "@/components/SectionAudioPlayer";
 
 /**
  * The page scrolls as a deck: each card pins near the top of the viewport while
@@ -32,17 +37,24 @@ const stacked = [
 
 export default function HomePage() {
   return (
-    <>
+    <SectionAudioPlayer>
       <main>
         <CardStack>
           {stacked.map((SectionComponent, i) => (
-            <StackItem key={SectionComponent.name} index={i}>
-              <SectionComponent />
-            </StackItem>
+            <NarrationSection key={SectionComponent.name} index={i}>
+              <StackItem index={i}>
+                <SectionComponent />
+              </StackItem>
+            </NarrationSection>
           ))}
         </CardStack>
       </main>
+      {/* The mute button inside here reads the narration state, so this must
+          stay within SectionAudioPlayer's subtree, not just the card stack. */}
       <WhatsAppFloatingButton />
-    </>
+      {/* Covers the page on arrival and parts to reveal it. Last, so it lands
+          over the deck and the floating button alike. */}
+      <EnterGate />
+    </SectionAudioPlayer>
   );
 }

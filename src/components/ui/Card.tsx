@@ -1,31 +1,54 @@
 import type { ReactNode } from "react";
+import { BorderGlow } from "./BorderGlow";
 import { Icon, type IconName } from "./Icon";
 
+/**
+ * Every box inside a section panel. Built on BorderGlow, so the border and a
+ * soft bloom track the pointer along whichever edge it is nearest.
+ *
+ * The base border stays: BorderGlow's lit border is a masked cone that only
+ * covers the arc facing the pointer, so without a resting border underneath it
+ * the rest of the card's outline would simply be missing.
+ */
 export function Card({
   children,
   className,
+  contentClassName = "p-5",
   hover = false,
-  as: Tag = "div",
+  as = "div",
 }: {
   children: ReactNode;
   className?: string;
+  /**
+   * Applied to an inner div, not to BorderGlow's own `className`. BorderGlow
+   * clips content to its rounded corners via `.border-glow-inner`, which has
+   * no padding of its own — padding passed to `className` instead lands on
+   * the unclipped outer element, so content sits flush against the rounded
+   * corners and looks cut off. Pass layout-only classes (h-full, relative,
+   * group) via `className`; pass padding/spacing/flex classes for the
+   * content here.
+   */
+  contentClassName?: string;
   hover?: boolean;
   as?: "div" | "article" | "li";
 }) {
   return (
-    <Tag
+    <BorderGlow
+      as={as}
       className={[
-        "bg-card border-line rounded-[16px] border",
-        hover
-          ? "hover:border-primary/30 transition-[transform,border-color] duration-200 hover:-translate-y-1"
-          : "",
+        "bg-card border-line border",
+        // The lift is on the card, not on BorderGlow's inner wrapper, so the
+        // bloom travels with it.
+        hover ? "transition-transform duration-200 hover:-translate-y-1" : "",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {children}
-    </Tag>
+      <div className={["h-full", contentClassName].filter(Boolean).join(" ")}>
+        {children}
+      </div>
+    </BorderGlow>
   );
 }
 
@@ -58,8 +81,12 @@ export function FeatureCard({
   title: string;
   body: string;
 }) {
+  // `h-full`: in a grid the card fills its row rather than shrinking to its own
+  // text, so a two-line body and a three-line one leave cards the same height.
+  // This only works if every wrapper between the grid and the card is also full
+  // height — see the Reveal wrappers at the call sites.
   return (
-    <Card hover as="article" className="p-6">
+    <Card hover as="article" className="h-full" contentClassName="p-6">
       <IconChip name={icon} />
       <h3 className="text-ink mt-5 text-lg font-semibold">{title}</h3>
       <p className="text-muted mt-2 text-[15px] leading-relaxed">{body}</p>

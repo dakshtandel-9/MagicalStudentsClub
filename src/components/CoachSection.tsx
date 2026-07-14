@@ -17,18 +17,20 @@ export function CoachSection() {
               className="pointer-events-none absolute inset-0 rounded-full opacity-70 blur-[90px]"
               style={{
                 background:
-                  "radial-gradient(circle at 50% 55%, rgba(232,62,140,0.13) 0%, rgba(232,62,140,0) 70%)",
+                  "radial-gradient(circle at 50% 55%, rgba(232,62,140,0.25) 0%, rgba(232,62,140,0) 70%)",
               }}
             />
-            <Image
-              src="/images/pradeep-acharya.png"
-              alt="Portrait of Pradeep Acharya"
-              width={500}
-              height={500}
-              loading="lazy"
-              sizes="(max-width: 1024px) 340px, 420px"
-              className="relative h-auto w-full object-contain [mask-image:linear-gradient(to_bottom,black_64%,transparent_93%)] [-webkit-mask-image:linear-gradient(to_bottom,black_64%,transparent_93%)]"
-            />
+            <Card className="relative overflow-hidden" contentClassName="p-0">
+              <Image
+                src="/images/AboutImage.png"
+                alt="Portrait of Pradeep Acharya"
+                width={500}
+                height={500}
+                loading="lazy"
+                sizes="(max-width: 1024px) 340px, 420px"
+                className="relative h-auto w-full object-cover"
+              />
+            </Card>
           </div>
         </Reveal>
 
@@ -55,7 +57,8 @@ export function CoachSection() {
                 <Card
                   key={point.text}
                   as="li"
-                  className="flex list-none items-center gap-3 p-5"
+                  className="list-none"
+                  contentClassName="flex items-center gap-3 p-5"
                 >
                   <Icon
                     name={point.icon as IconName}

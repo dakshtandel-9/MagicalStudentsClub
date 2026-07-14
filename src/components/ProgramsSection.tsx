@@ -26,7 +26,12 @@ export function ProgramsSection() {
       <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:mt-6 lg:grid-cols-3">
         {programs.map((program, i) => (
           <Reveal key={program.title} delay={i * 80} className="h-full">
-            <Card hover as="article" className="flex h-full flex-col p-5 lg:p-6">
+            <Card
+              hover
+              as="article"
+              className="h-full"
+              contentClassName="flex flex-col p-5 lg:p-6"
+            >
               <IconChip name={program.icon as IconName} />
 
               <h3 className="text-ink mt-5 text-lg font-semibold">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Clock, Menu, X } from "lucide-react";
 import { contact, navLinks, whatsappHref } from "@/content/site";
@@ -15,6 +16,7 @@ import { WhatsAppGlyph } from "./ui/WhatsAppGlyph";
  */
 export function Header() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
   // Escape closes the menu, and the page behind it must not scroll while open.
   useEffect(() => {
@@ -39,12 +41,9 @@ export function Header() {
         <div className="flex h-16 items-center justify-between gap-6 lg:h-[72px]">
           <Link
             href="/"
-            className="flex min-w-0 items-center gap-2.5"
+            className="flex min-w-0 items-center"
             aria-label="Magical Students Club — home"
           >
-            <span className="bg-primary/10 ring-primary/20 text-primary font-display inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold ring-1">
-              M
-            </span>
             <span className="font-display text-ink text-[15px] leading-tight font-semibold whitespace-nowrap">
               Magical Students Club
             </span>
@@ -53,7 +52,10 @@ export function Header() {
           <nav aria-label="Main" className="hidden xl:block">
             <ul className="flex items-center gap-1">
               {navLinks.map((link) => {
-                const active = link.href === "/";
+                const active =
+                  link.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(link.href);
                 return (
                   <li key={link.label}>
                     <Link
@@ -119,7 +121,10 @@ export function Header() {
             <nav aria-label="Mobile" className="py-4">
               <ul className="flex flex-col">
                 {navLinks.map((link) => {
-                  const active = link.href === "/";
+                  const active =
+                    link.href === "/"
+                      ? pathname === "/"
+                      : pathname.startsWith(link.href);
                   return (
                     <li key={link.label}>
                       <Link

@@ -8,7 +8,10 @@ import type { IconName } from "./ui/Icon";
  */
 export function StatsBar() {
   return (
-    <Card className="overflow-hidden">
+    // No `overflow-hidden` here: it would clip the pointer-tracked bloom that
+    // spills outside the card. Card clips its own content to the rounded
+    // corners internally, which is all this needed it for.
+    <Card contentClassName="p-0">
       <dl className="grid grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, i) => (
           <div

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BorderGlow } from "./BorderGlow";
 
 /** Content column. 1280px cap, generous gutters — per the design rules. */
 export function Container({
@@ -58,49 +59,62 @@ export function Section({
     // background around it. The card stays opaque — cards overlap as they
     // scroll, and a translucent one would leak the card beneath.
     //
-    // The pink glow cannot live on the <section> itself: that element is
-    // overflow-hidden (which would clip the bloom) and opaque (which would hide
-    // it). So the glow rides on this wrapper, which is neither, and paints in
-    // the margin around the panel.
+    // Neither glow can live on the <section> itself: that element is
+    // overflow-hidden (which would clip both blooms) and opaque (which would
+    // hide them). Both ride on this wrapper, which is neither, and paint in the
+    // margin around the panel:
     //
-    // Bare .glow-lg is the top edge only. The sides belong to the hero and the
-    // bottom to the footer; a mid-stack card is flanked and covered, so a glow
-    // there would read as a seam rather than a halo.
-    <div
-      className={[
-        "glow-lg rounded-[20px]",
-        "mx-3 my-3 sm:mx-5 sm:my-4 lg:mx-6 lg:my-5",
-        "lg:h-[calc(100vh-2.5rem)]",
-      ].join(" ")}
+    //   .glow-lg   the static pink halo. Bare, it is the top edge only — the
+    //              leading edge of a card riding up. The sides belong to the
+    //              hero and the bottom to the footer; a mid-stack card is
+    //              flanked and covered, so a glow there would read as a seam.
+    //   BorderGlow the pointer-tracked lit border and bloom, same brand pink,
+    //              on whichever edge the pointer is nearest.
+    //
+    // The BorderGlow radius/background are matched to the panel below so its
+    // mesh-gradient border traces the panel's own outline rather than a
+    // differently-rounded ghost of it.
+    <BorderGlow
+      className={["glow-lg", "mx-3 my-3 sm:mx-5 sm:my-4 lg:mx-6 lg:my-5"].join(
+        " ",
+      )}
+      borderRadius={20}
+      backgroundColor="var(--color-background)"
+      // The panels are far larger than the inner cards, so the pointer spends
+      // most of its life in the dead centre of one. A lower sensitivity lights
+      // the edge from further out; a wider bloom keeps it in proportion to the
+      // panel rather than looking like a hairline on a wall.
+      edgeSensitivity={20}
+      glowRadius={60}
+      coneSpread={30}
+      // The static .glow-lg halo is already pink light around this panel — a
+      // full-strength wash on top of it turns the panel edge magenta. This
+      // layer only has to add the pointer-tracked highlight.
+      fillOpacity={0.25}
     >
       <section
         id={id}
         aria-labelledby={labelledBy}
         className={[
-          "border-line bg-background relative h-full overflow-hidden rounded-[20px] border",
-          // Exactly one viewport tall on desktop, with its vertical margin and the
-          // sticky top offset accounted for, so a pinned card sits fully on screen.
-          "px-2 py-14 sm:py-16 lg:flex lg:items-center lg:py-6",
+          "border-line bg-background relative overflow-hidden rounded-[20px] border",
+          // One viewport tall on desktop, with its vertical margin and the sticky
+          // top offset accounted for, so a pinned card sits fully on screen.
+          //
+          // min-height, never a fixed height. A fixed card cannot hold content
+          // that runs taller than the viewport, so it either clips it against the
+          // overflow-hidden above or hands it to an inner scroller — and an inner
+          // scroller slides the section's own heading up under that same clipped
+          // edge the moment it is touched. A card that simply grows has neither
+          // problem: nothing is ever cut off, and the deck scrolls the taller card
+          // past like any other.
+          "px-2 py-14 sm:py-16 lg:flex lg:min-h-[calc(100vh-2.5rem)] lg:items-center lg:py-6",
           className,
         ]
           .filter(Boolean)
           .join(" ")}
       >
-        {/* Safety net: the card is a fixed 100vh, so on an unusually short screen
-            content could otherwise be clipped by the card's overflow-hidden and
-            become unreachable. Let it scroll within the card instead.
-
-            data-stack-scrollable tells the deck's wheel handler to keep its hands
-            off: a wheel here is meant to scroll this overflow, not advance the
-            deck, which would otherwise make the clipped content unreachable —
-            the very thing this container exists to prevent. */}
-        <Container
-          data-stack-scrollable
-          className="relative max-h-full overflow-y-auto"
-        >
-          {children}
-        </Container>
+        <Container className="relative">{children}</Container>
       </section>
-    </div>
+    </BorderGlow>
   );
 }

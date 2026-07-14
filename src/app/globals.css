@@ -169,6 +169,40 @@
 }
 
 /*
+ * The gate logo's pulse — a heartbeat, not a throb: two beats in quick
+ * succession (the lub-dub) and then a rest, rather than an even sine. The
+ * doubled beat is what makes it read as a pulse rather than a breathing box.
+ */
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.09);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.06);
+  }
+  56% {
+    transform: scale(1);
+  }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-heartbeat {
+    animation: none;
+  }
+}
+
+/*
  * Reveal-on-scroll. One transition, no animation library.
  * Visible is the default; only an explicitly-armed block is hidden, so a
  * failed observer or missing JS can never leave content invisible.
@@ -204,4 +238,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* The rim's WebGL canvas. Its host span is inset negatively past the button so
+   the bloom can bleed outside the edge; the canvas fills that padded box. */
+.specular-rim canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }

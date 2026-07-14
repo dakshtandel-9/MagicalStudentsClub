@@ -2,9 +2,11 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { hero, whatsappHref } from "@/content/site";
 import { ButtonLink } from "./ui/Button";
+import { BorderGlow } from "./ui/BorderGlow";
 import { Container } from "./ui/Section";
 import { WhatsAppGlyph } from "./ui/WhatsAppGlyph";
 import { StatsBar } from "./StatsBar";
+import { FeaturedIn } from "./FeaturedIn";
 import { Header } from "./Header";
 
 export function HeroSection() {
@@ -12,12 +14,25 @@ export function HeroSection() {
     // Card frame matches the stacked sections, with the same all-round margin.
     // The nav is the card's own top row — a fixed part of the hero, not a
     // floating bar. Exactly one viewport tall, margins included.
-    // The glow rides on this wrapper rather than the <section>: the section is
-    // overflow-hidden and opaque, so a glow on it would be clipped and hidden.
+    //
+    // The hero hand-rolls its panel rather than using <Section card>, because it
+    // needs the nav as its own top row. That means it must also hand-roll the
+    // panel's two glows, and they have to stay in step with the ones Section
+    // gives every other boulder — same BorderGlow props, same brand pink.
+    // Neither glow can sit on the <section>: it is overflow-hidden (which clips
+    // the bloom) and opaque (which hides it), so both ride on this wrapper.
     <div className="bg-background">
       {/* glow-x: the hero is the one panel seen whole against the page on both
-          sides, so it glows left and right as well as on top. */}
-      <div className="glow-lg glow-x mx-3 my-3 rounded-[20px] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]">
+          sides, so its static halo runs left and right as well as on top. */}
+      <BorderGlow
+        className="glow-lg glow-x mx-3 my-3 sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]"
+        borderRadius={20}
+        backgroundColor="var(--color-background)"
+        edgeSensitivity={20}
+        glowRadius={60}
+        coneSpread={30}
+        fillOpacity={0.25}
+      >
         <section className="border-line bg-background relative flex h-full flex-col overflow-hidden rounded-[20px] border">
         <Header />
 
@@ -33,7 +48,7 @@ export function HeroSection() {
 
       {/* Fills the height left by the nav row, so the hero content sits centred
           in the card rather than pinned under the nav. */}
-      <Container className="relative flex flex-1 flex-col justify-center py-12 lg:min-h-0 lg:py-8">
+      <Container className="relative flex flex-1 flex-col justify-center py-12 lg:min-h-0 lg:py-4">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
           <div className="order-2 lg:order-1">
             {/* Four deliberate lines: the WHAT/HOW contrast has to land on its
@@ -67,7 +82,9 @@ export function HeroSection() {
             </div>
           </div>
 
-          <div className="relative order-1 lg:order-2">
+          {/* Nudged down: the portrait is the tallest cell, so without this its
+              crown rides up into the nav row above. */}
+          <div className="relative order-1 lg:order-2 lg:pt-14">
             {/* Dotted field: the "unretained" texture the spine motif resolves. */}
             <div
               aria-hidden
@@ -83,7 +100,12 @@ export function HeroSection() {
               }}
             />
 
-            <div className="relative mx-auto flex max-w-[300px] items-end justify-center sm:max-w-[400px] lg:max-w-[480px]">
+            {/* The portrait is the tallest cell in the grid, so it alone decides
+                the row height — and therefore whether the featured-in strip and
+                the stats bar still fit inside the 100vh card. Cap it against the
+                viewport so a short screen shrinks the portrait instead of
+                pushing the stats bar out through the card's bottom edge. */}
+            <div className="relative mx-auto flex max-h-[42vh] max-w-[300px] items-end justify-center sm:max-w-[400px] lg:max-h-[42vh] lg:max-w-[440px]">
               {/* The source cutout is square and ends in a flat bottom edge.
                   Fade the last strip out so it dissolves into the page instead
                   of stopping on a hard horizontal line. */}
@@ -94,7 +116,7 @@ export function HeroSection() {
                 height={500}
                 priority
                 sizes="(max-width: 1024px) 400px, 480px"
-                className="h-auto w-full object-contain [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
+                className="h-auto max-h-full w-full object-contain [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
               />
 
               {/* Experience callout, clear of the portrait's lower edge. */}
@@ -112,12 +134,16 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="mt-14 lg:mt-16">
+        <div className="mt-12 lg:mt-8">
+          <FeaturedIn />
+        </div>
+
+        <div className="mt-8 lg:mt-6">
           <StatsBar />
         </div>
       </Container>
         </section>
-      </div>
+      </BorderGlow>
     </div>
   );
 }
