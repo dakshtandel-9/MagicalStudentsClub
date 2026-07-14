@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  /* Core palette — fixed by the brand guide. Pink is an accent, never a surface. */
+  --color-background: #080a0f;
+  --color-card: #11141c;
+  --color-primary: #e83e8c;
+  --color-primary-hover: #f052a0;
+  --color-ink: #f8f8fa;
+  --color-muted: #9ca3af;
+  --color-line: #242832;
+
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 16px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Statistics read as data, not prose: figures stay aligned across the stat bar. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /*
+   * The recall spine — the signature device.
+   * A hairline that runs through the process sections: dotted where a step is
+   * only "covered", solid pink where it has actually been retained. It encodes
+   * the thesis of the whole business, so it earns its place.
+   */
+  .spine-track {
+    background-image: linear-gradient(
+      to right,
+      var(--color-line) 0 6px,
+      transparent 6px 12px
+    );
+    background-size: 12px 1px;
+    background-repeat: repeat-x;
+  }
+
+  .spine-track-y {
+    background-image: linear-gradient(
+      to bottom,
+      var(--color-line) 0 6px,
+      transparent 6px 12px
+    );
+    background-size: 1px 12px;
+    background-repeat: repeat-y;
+  }
+}
+
+/*
+ * Reveal-on-scroll. One transition, no animation library.
+ * Visible is the default; only an explicitly-armed block is hidden, so a
+ * failed observer or missing JS can never leave content invisible.
+ */
+[data-reveal] {
+  transition:
+    opacity 0.5s ease-out,
+    transform 0.5s ease-out;
+}
+
+[data-reveal="hidden"] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  [data-reveal],
+  [data-reveal="hidden"] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
