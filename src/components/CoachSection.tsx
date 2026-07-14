@@ -8,8 +8,8 @@ import { Eyebrow } from "./ui/SectionHeading";
 
 export function CoachSection() {
   return (
-    <Section id="coach" labelledBy="coach-heading">
-      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+    <Section id="coach" labelledBy="coach-heading" fullscreen>
+      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
         <Reveal>
           <div className="relative mx-auto max-w-[420px]">
             <div
@@ -26,8 +26,8 @@ export function CoachSection() {
               width={500}
               height={500}
               loading="lazy"
-              sizes="(max-width: 1024px) 420px, 420px"
-              className="relative h-auto w-full object-contain"
+              sizes="(max-width: 1024px) 340px, 420px"
+              className="relative h-auto w-full object-contain [mask-image:linear-gradient(to_bottom,black_64%,transparent_93%)] [-webkit-mask-image:linear-gradient(to_bottom,black_64%,transparent_93%)]"
             />
           </div>
         </Reveal>
@@ -41,18 +41,21 @@ export function CoachSection() {
             >
               {coach.name}
             </h2>
-            <p className="text-muted mt-5 text-[15px] leading-relaxed text-pretty sm:text-base">
+            <p className="text-muted mt-6 text-[15px] leading-relaxed text-pretty sm:text-base">
               {coach.bio}
+            </p>
+            <p className="text-muted mt-4 text-[15px] leading-relaxed text-pretty">
+              {coach.bioExtra}
             </p>
           </Reveal>
 
           <Reveal delay={80}>
-            <ul className="mt-8 grid gap-3 sm:grid-cols-2">
+            <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:mt-12">
               {coach.credibility.map((point) => (
                 <Card
                   key={point.text}
                   as="li"
-                  className="flex list-none items-center gap-3 p-4"
+                  className="flex list-none items-center gap-3 p-5"
                 >
                   <Icon
                     name={point.icon as IconName}

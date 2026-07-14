@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
- * Fade/slide a block in when it first enters the viewport.
+ * Fade/slide a block in when it first scrolls into view.
  *
- * Content is visible by default and is only hidden once the effect has run and
- * armed the observer. If JS never executes, or IntersectionObserver is missing,
- * or the observer never fires, the content simply stays visible — a decorative
- * animation must never be able to hide real content.
- *
- * One observer per block, disconnected after it fires. Reduced motion is
- * handled in CSS.
+ * Visibility never depends on an async callback arriving. A block is only ever
+ * hidden while `armed` is true, and `armed` is set synchronously in the same
+ * effect that starts the observer — but only for blocks that are measurably
+ * below the fold at mount. Anything already on screen is shown immediately and
+ * never armed, and if JS or IntersectionObserver is unavailable nothing is
+ * armed at all. A decorative animation must not be able to hide real content.
  */
 export function Reveal({
   children,
@@ -23,51 +22,57 @@ export function Reveal({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [state, setState] = useState<"idle" | "armed" | "shown">("idle");
+  const [armed, setArmed] = useState(false);
+  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
 
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    if (reduced || typeof IntersectionObserver === "undefined") {
-      setState("shown");
+    if (
+      typeof IntersectionObserver === "undefined" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       return;
     }
 
-    // Already on screen at mount (e.g. above the fold): show it without
-    // arming, so it never flashes out and back in.
-    const rect = node.getBoundingClientRect();
-    if (rect.top < window.innerHeight) {
-      setState("shown");
-      return;
-    }
+    // Below the fold at mount? Only then is it safe to hide it, because the
+    // user must scroll to reach it and the observer will fire on the way.
+    if (node.getBoundingClientRect().top < window.innerHeight) return;
 
-    setState("armed");
+    setArmed(true);
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setState("shown");
+          setShown(true);
           observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -8% 0px" },
+      { rootMargin: "0px 0px -40px 0px" },
     );
 
     observer.observe(node);
-    return () => observer.disconnect();
+
+    // Safety net: if the observer somehow never reports (headless capture,
+    // odd scroll container, resize-to-full-height), reveal anyway rather than
+    // leaving the section blank.
+    const failsafe = window.setTimeout(() => setShown(true), 1200);
+
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(failsafe);
+    };
   }, []);
+
+  const hidden = armed && !shown;
 
   return (
     <div
       ref={ref}
       className={className}
-      data-reveal={state === "armed" ? "hidden" : "shown"}
-      style={delay && state === "armed" ? { transitionDelay: `${delay}ms` } : undefined}
+      data-reveal={armed ? (hidden ? "hidden" : "shown") : undefined}
+      style={hidden ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
     </div>

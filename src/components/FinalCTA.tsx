@@ -11,7 +11,7 @@ export function FinalCTA() {
       <Reveal>
         {/* Pink is carried by the border, the glow and the button — not a slab
             of gradient. Keeps the card premium and the text legible. */}
-        <div className="border-primary/25 bg-card relative overflow-hidden rounded-[20px] border px-6 py-12 text-center sm:px-12 sm:py-16">
+        <div className="border-primary/25 bg-card relative overflow-hidden rounded-[20px] border px-6 py-16 text-center sm:px-12 sm:py-20 lg:py-24">
           <div
             aria-hidden
             className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[36rem] -translate-x-1/2 rounded-full opacity-80 blur-[90px]"

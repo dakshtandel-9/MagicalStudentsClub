@@ -48,13 +48,13 @@ export function Header() {
         <div className="flex h-16 items-center justify-between gap-6 lg:h-[72px]">
           <Link
             href="/"
-            className="flex shrink-0 items-center gap-2.5"
+            className="flex min-w-0 items-center gap-2.5"
             aria-label="Magical Students Club — home"
           >
-            <span className="bg-primary/10 ring-primary/20 text-primary font-display inline-flex size-8 items-center justify-center rounded-lg text-sm font-bold ring-1">
+            <span className="bg-primary/10 ring-primary/20 text-primary font-display inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold ring-1">
               M
             </span>
-            <span className="font-display text-ink hidden text-[15px] leading-tight font-semibold sm:block">
+            <span className="font-display text-ink text-[15px] leading-tight font-semibold whitespace-nowrap">
               Magical Students Club
             </span>
           </Link>
@@ -82,20 +82,21 @@ export function Header() {
             </ul>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <span className="text-muted hidden items-center gap-1.5 text-xs 2xl:flex">
               <Clock className="size-3.5" aria-hidden />
               {contact.hours}
             </span>
 
-            <ButtonLink
-              href={whatsappHref}
-              size="md"
-              className="hidden sm:inline-flex"
-            >
-              <WhatsAppGlyph className="size-4" />
-              Talk to Us on WhatsApp
-            </ButtonLink>
+            {/* On phones the menu carries the WhatsApp CTA, so the bar keeps
+                just the brand and the menu toggle. Wrapped rather than given a
+                `hidden` class: ButtonLink's own `inline-flex` would out-rank it. */}
+            <div className="hidden md:block">
+              <ButtonLink href={whatsappHref} size="md">
+                <WhatsAppGlyph className="size-4" />
+                Talk to Us on WhatsApp
+              </ButtonLink>
+            </div>
 
             <button
               type="button"
@@ -103,7 +104,7 @@ export function Header() {
               aria-expanded={open}
               aria-controls="mobile-menu"
               aria-label={open ? "Close menu" : "Open menu"}
-              className="border-line text-ink hover:border-muted/40 inline-flex size-10 items-center justify-center rounded-full border transition-colors xl:hidden"
+              className="border-line text-ink hover:border-muted/40 inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors xl:hidden"
             >
               {open ? (
                 <X className="size-5" aria-hidden />
@@ -145,11 +146,7 @@ export function Header() {
               </ul>
 
               <div className="border-line mt-4 border-t pt-4">
-                <ButtonLink
-                  href={whatsappHref}
-                  size="lg"
-                  className="w-full sm:hidden"
-                >
+                <ButtonLink href={whatsappHref} size="lg" className="w-full">
                   <WhatsAppGlyph className="size-4" />
                   Talk to Us on WhatsApp
                 </ButtonLink>

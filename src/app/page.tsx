@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { HeroSection } from "@/components/HeroSection";
+import { StatsBar } from "@/components/StatsBar";
 import { ChallengesSection } from "@/components/ChallengesSection";
 import { LearningMethodSection } from "@/components/LearningMethodSection";
 import { ProgramsSection } from "@/components/ProgramsSection";
@@ -17,6 +18,7 @@ export default function HomePage() {
       <Header />
       <main>
         <HeroSection />
+        <StatsBar />
         <ChallengesSection />
         <LearningMethodSection />
         <ProgramsSection />

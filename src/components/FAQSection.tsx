@@ -1,5 +1,5 @@
 import { ArrowRight, Minus, Plus } from "lucide-react";
-import { faqs } from "@/content/site";
+import { faqIntro, faqs } from "@/content/site";
 import { ButtonLink } from "./ui/Button";
 import { Reveal } from "./ui/Reveal";
 import { Section } from "./ui/Section";
@@ -12,7 +12,7 @@ import { SectionHeading } from "./ui/SectionHeading";
  */
 export function FAQSection() {
   return (
-    <Section id="faq" labelledBy="faq-heading">
+    <Section id="faq" labelledBy="faq-heading" fullscreen>
       <Reveal>
         <div className="flex justify-center">
           <SectionHeading
@@ -20,17 +20,18 @@ export function FAQSection() {
             title={
               <span id="faq-heading">Quick Answers to Common Questions</span>
             }
+            subtitle={faqIntro.lead}
           />
         </div>
       </Reveal>
 
-      <div className="mx-auto mt-12 max-w-3xl">
-        <ul className="grid gap-3">
+      <div className="mx-auto mt-14 max-w-3xl lg:mt-16">
+        <ul className="grid gap-4">
           {faqs.map((faq, i) => (
             <Reveal key={faq.q} delay={i * 60}>
               <li className="list-none">
                 <details className="group bg-card border-line hover:border-muted/30 rounded-[16px] border transition-colors">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6 [&::-webkit-details-marker]:hidden">
                     <h3 className="text-ink text-[15px] font-medium">
                       {faq.q}
                     </h3>
@@ -45,7 +46,7 @@ export function FAQSection() {
                       />
                     </span>
                   </summary>
-                  <p className="text-muted px-5 pb-5 text-[15px] leading-relaxed">
+                  <p className="text-muted px-6 pb-6 text-[15px] leading-relaxed">
                     {faq.a}
                   </p>
                 </details>
@@ -55,7 +56,7 @@ export function FAQSection() {
         </ul>
 
         <Reveal delay={120}>
-          <div className="mt-8 flex justify-center">
+          <div className="mt-12 flex justify-center">
             <ButtonLink href="/faq" variant="secondary">
               View All FAQs
               <ArrowRight className="size-4" aria-hidden />

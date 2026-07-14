@@ -2,6 +2,7 @@ import { ArrowRight, Play, Quote } from "lucide-react";
 import Image from "next/image";
 import {
   results,
+  resultsIntro,
   videoTestimonials,
   writtenTestimonials,
 } from "@/content/site";
@@ -108,8 +109,8 @@ function WrittenTestimonial({
 
 export function ResultsSection() {
   return (
-    <Section id="results" labelledBy="results-heading">
-      <div className="grid gap-12 lg:grid-cols-2 lg:gap-14">
+    <Section id="results" labelledBy="results-heading" fullscreen>
+      <div className="grid gap-14 lg:grid-cols-2 lg:gap-16">
         <div>
           <Reveal>
             <h2
@@ -118,12 +119,15 @@ export function ResultsSection() {
             >
               Real Results. Real Transformations.
             </h2>
+            <p className="text-muted mt-5 max-w-md text-[15px] leading-relaxed text-pretty">
+              {resultsIntro.lead}
+            </p>
           </Reveal>
 
-          <div className="mt-8 grid gap-4">
+          <div className="mt-10 grid gap-4">
             {results.map((result, i) => (
               <Reveal key={result.title} delay={i * 80}>
-                <Card hover className="flex items-start gap-4 p-5">
+                <Card hover className="flex items-start gap-4 p-6">
                   <IconChip name={result.icon as IconName} size="sm" />
                   <div>
                     <h3 className="text-ink text-[15px] font-semibold">
@@ -153,10 +157,13 @@ export function ResultsSection() {
             <h2 className="font-display text-ink text-3xl leading-[1.15] font-semibold text-balance sm:text-4xl">
               What Parents &amp; Students Say
             </h2>
+            <p className="text-muted mt-5 max-w-md text-[15px] leading-relaxed text-pretty">
+              {resultsIntro.testimonialsLead}
+            </p>
           </Reveal>
 
           <Reveal delay={80}>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
               {videoTestimonials.map((item) => (
                 <VideoTestimonial key={item.id} item={item} />
               ))}

@@ -1,4 +1,4 @@
-import { fiveR, learningSteps } from "@/content/site";
+import { fiveR, learningSteps, methodIntro } from "@/content/site";
 import { Card } from "./ui/Card";
 import { Icon, type IconName } from "./ui/Icon";
 import { Reveal } from "./ui/Reveal";
@@ -7,8 +7,8 @@ import { Eyebrow, Mark } from "./ui/SectionHeading";
 
 export function LearningMethodSection() {
   return (
-    <Section id="method" labelledBy="method-heading">
-      <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
+    <Section id="method" labelledBy="method-heading" fullscreen>
+      <div className="grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
         {/* 5R panel. Labels only — the guide defines no copy for each R, and
             inventing it would mean inventing the method. */}
         <Reveal>
@@ -61,12 +61,15 @@ export function LearningMethodSection() {
               We Teach Students{" "}
               <Mark>How to Learn Effectively</Mark>
             </h2>
+            <p className="text-muted mt-5 max-w-xl text-[15px] leading-relaxed text-pretty">
+              {methodIntro.lead}
+            </p>
           </Reveal>
 
           {/* Understand → Remember → Recall → Apply → Achieve.
               A real sequence, so the connector carries meaning. */}
           <Reveal delay={80}>
-            <ol className="mt-10 grid grid-cols-2 gap-y-8 sm:grid-cols-3 lg:flex lg:items-start lg:justify-between lg:gap-2">
+            <ol className="mt-12 grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:mt-14 lg:flex lg:items-start lg:justify-between lg:gap-3">
               {learningSteps.map((step, i) => (
                 <li
                   key={step.label}
@@ -82,8 +85,11 @@ export function LearningMethodSection() {
                   <span className="bg-card border-line text-primary hover:border-primary/40 relative z-10 inline-flex size-14 items-center justify-center rounded-full border transition-colors">
                     <Icon name={step.icon as IconName} className="size-6" />
                   </span>
-                  <span className="text-ink mt-3.5 text-sm font-medium">
+                  <span className="text-ink mt-4 text-sm font-medium">
                     {step.label}
+                  </span>
+                  <span className="text-muted mt-2 block text-[13px] leading-relaxed text-pretty">
+                    {step.detail}
                   </span>
                 </li>
               ))}

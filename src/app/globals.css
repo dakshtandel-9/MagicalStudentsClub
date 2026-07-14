@@ -19,6 +19,9 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Decorative glows are deliberately oversized and bleed past the layout.
+       They must never be able to widen the page or create a scrollbar. */
+    overflow-x: hidden;
   }
 
   body {
@@ -82,7 +85,8 @@
  * Visible is the default; only an explicitly-armed block is hidden, so a
  * failed observer or missing JS can never leave content invisible.
  */
-[data-reveal] {
+[data-reveal="hidden"],
+[data-reveal="shown"] {
   transition:
     opacity 0.5s ease-out,
     transform 0.5s ease-out;

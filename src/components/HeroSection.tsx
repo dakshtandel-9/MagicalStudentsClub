@@ -4,11 +4,10 @@ import { hero, whatsappHref } from "@/content/site";
 import { ButtonLink } from "./ui/Button";
 import { Container } from "./ui/Section";
 import { WhatsAppGlyph } from "./ui/WhatsAppGlyph";
-import { StatsBar } from "./StatsBar";
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden pt-10 pb-16 sm:pt-14 lg:pt-16 lg:pb-20">
+    <section className="relative overflow-hidden pt-8 pb-16 sm:pt-14 lg:pt-16 lg:pb-20">
       {/* Single soft pink glow behind the portrait. The only glow on the page. */}
       <div
         aria-hidden
@@ -22,18 +21,26 @@ export function HeroSection() {
       <Container className="relative">
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
           <div className="order-2 lg:order-1">
-            <h1 className="font-display text-ink text-[2.1rem] leading-[1.1] font-bold text-balance sm:text-5xl lg:text-[3.4rem]">
-              Schools tell your child{" "}
-              <span className="text-muted">WHAT</span> to study.
-              <br className="hidden sm:block" /> We teach them{" "}
-              <span className="text-primary">HOW</span> to study.
+            {/* Four deliberate lines: the WHAT/HOW contrast has to land on its
+                own line for the antithesis to read. */}
+            <h1 className="font-display text-ink text-[2.1rem] leading-[1.12] font-bold sm:text-[2.75rem] lg:text-[3.25rem]">
+              <span className="block">Schools tell your child</span>
+              <span className="block">
+                <span className="text-muted">WHAT</span> to study.
+              </span>
+              <span className="mt-2 block">We teach them</span>
+              <span className="block">
+                <span className="text-primary">HOW</span> to study.
+              </span>
             </h1>
 
             <p className="text-muted mt-6 max-w-xl text-[15px] leading-relaxed text-pretty sm:text-base">
               {hero.supporting}
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* Capped so the floating WhatsApp button in the bottom-right can
+                never come to rest on top of a CTA on a phone. */}
+            <div className="mt-8 flex max-w-[19rem] flex-col gap-3 sm:max-w-none sm:flex-row sm:items-center">
               <ButtonLink href={whatsappHref} size="lg">
                 <WhatsAppGlyph className="size-[18px]" />
                 Chat on WhatsApp
@@ -61,19 +68,22 @@ export function HeroSection() {
               }}
             />
 
-            <div className="relative mx-auto flex max-w-[380px] items-end justify-center lg:max-w-[460px]">
+            <div className="relative mx-auto flex max-w-[300px] items-end justify-center sm:max-w-[400px] lg:max-w-[480px]">
+              {/* The source cutout is square and ends in a flat bottom edge.
+                  Fade the last strip out so it dissolves into the page instead
+                  of stopping on a hard horizontal line. */}
               <Image
                 src="/images/pradeep-acharya.png"
                 alt="Pradeep Acharya, memory and learning coach at Magical Students Club"
                 width={500}
                 height={500}
                 priority
-                sizes="(max-width: 1024px) 380px, 460px"
-                className="h-auto w-full object-contain"
+                sizes="(max-width: 1024px) 400px, 480px"
+                className="h-auto w-full object-contain [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
               />
 
-              {/* Experience callout, anchored to the portrait. */}
-              <div className="bg-card/90 border-line absolute bottom-6 -left-2 rounded-2xl border px-4 py-3 backdrop-blur-sm sm:-left-4">
+              {/* Experience callout, clear of the portrait's lower edge. */}
+              <div className="bg-card/90 border-line absolute bottom-10 -left-1 rounded-2xl border px-4 py-3 backdrop-blur-sm sm:-left-6">
                 <p className="font-display text-ink tabular text-2xl leading-none font-bold">
                   20+
                 </p>
@@ -85,10 +95,6 @@ export function HeroSection() {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-14 lg:mt-16">
-          <StatsBar />
         </div>
       </Container>
     </section>

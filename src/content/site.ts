@@ -40,12 +40,77 @@ export const hero = {
     "Memory techniques, speed reading, concentration, and smarter study strategies for Grade 5+ students and competitive exam aspirants.",
 } as const;
 
+/**
+ * Section intros and per-item supporting lines.
+ *
+ * These are written to fill the taller presentation-style sections. Every line
+ * is a restatement of something the architecture guide already establishes —
+ * no new claim, number, credential or testimonial is introduced here.
+ */
+export const trust = {
+  eyebrow: "Trust & Credibility",
+  heading: "Two decades of teaching students how to learn",
+  intro:
+    "The numbers below come from twenty years of classroom and workshop practice with school students and competitive exam aspirants.",
+  statement:
+    "Every programme is taught by a coach who has spent his career on one question: how do students actually remember what they study?",
+} as const;
+
 export const stats = [
-  { icon: "users", value: "90,000+", label: "Students Trained" },
-  { icon: "calendar", value: "20+", label: "Years of Experience" },
-  { icon: "award", value: "45+", label: "Rank Holders" },
-  { icon: "star", value: "4.8★", label: "Google Rating" },
+  {
+    icon: "users",
+    value: "90,000+",
+    label: "Students Trained",
+    detail: "Across schools, workshops and the academy.",
+  },
+  {
+    icon: "calendar",
+    value: "20+",
+    label: "Years of Experience",
+    detail: "Two decades refining how memory is taught.",
+  },
+  {
+    icon: "award",
+    value: "45+",
+    label: "Rank Holders",
+    detail: "Aspirants who carried technique into their exams.",
+  },
+  {
+    icon: "star",
+    value: "4.8★",
+    label: "Google Rating",
+    detail: "From the parents and students we work with.",
+  },
 ] as const;
+
+export const challengesIntro = {
+  lead: "Most students are not short of effort. They are short of a method — so the hours go in and very little stays.",
+  transition:
+    "Each of these has the same root cause, and none of them is fixed by studying longer.",
+} as const;
+
+export const methodIntro = {
+  lead: "Learning is a sequence, not a single act. Skip a stage and the rest gives way — which is why re-reading fails and recall breaks down in the exam hall.",
+} as const;
+
+export const programsIntro = {
+  lead: "Three routes into the same skill, chosen by where a student is and what they are working towards.",
+  cta: "Not sure which fits? Tell us the grade or the exam and we will point you to the right one.",
+} as const;
+
+export const hybridIntro = {
+  lead: "Recorded lessons alone do not change how a student studies. The hybrid model pairs them with live practice, daily doubt clearing and a facilitator, so technique is actually put to work.",
+} as const;
+
+export const resultsIntro = {
+  lead: "What changes when a student learns how to learn.",
+  testimonialsLead:
+    "In their own words — parents and students we have worked with, shared with their permission.",
+} as const;
+
+export const faqIntro = {
+  lead: "The questions parents ask us most often. If yours is not here, message us on WhatsApp and we will answer it directly.",
+} as const;
 
 export const challenges = [
   {
@@ -72,11 +137,31 @@ export const challenges = [
 export const fiveR = ["Read", "Retain", "Recall", "Revise", "Result"] as const;
 
 export const learningSteps = [
-  { icon: "lightbulb", label: "Understand" },
-  { icon: "brain", label: "Remember" },
-  { icon: "sparkles", label: "Recall" },
-  { icon: "pencil", label: "Apply" },
-  { icon: "trophy", label: "Achieve" },
+  {
+    icon: "lightbulb",
+    label: "Understand",
+    detail: "Make sense of the idea before trying to hold on to it.",
+  },
+  {
+    icon: "brain",
+    label: "Remember",
+    detail: "Encode it with a technique, not by repetition.",
+  },
+  {
+    icon: "sparkles",
+    label: "Recall",
+    detail: "Retrieve it without the book open.",
+  },
+  {
+    icon: "pencil",
+    label: "Apply",
+    detail: "Use it on problems and past papers.",
+  },
+  {
+    icon: "trophy",
+    label: "Achieve",
+    detail: "Walk into the exam able to produce it.",
+  },
 ] as const;
 
 export const programs = [
@@ -84,18 +169,24 @@ export const programs = [
     icon: "brain",
     title: "Memory Mastery Workshop",
     body: "Practical techniques to remember faster and retain longer.",
+    detail:
+      "The starting point for most students: the core memory methods, taught so they can be used the same week.",
     audience: "Grade 5+",
   },
   {
     icon: "layers",
     title: "Hybrid Learning Program",
     body: "Recorded learning, live practice, doubt clearing, and facilitator support.",
+    detail:
+      "For students who want the technique embedded into how they study every day, not just demonstrated once.",
     audience: "School Students",
   },
   {
     icon: "target",
     title: "Competitive Exam Track",
     body: "Learning and memory strategies for UPSC, NEET, JEE, SSC, Banking, and other exams.",
+    detail:
+      "Built around the volume and recall pressure of competitive papers, where re-reading stops working entirely.",
     audience: "Exam Aspirants",
   },
 ] as const;
@@ -105,21 +196,25 @@ export const hybridModel = [
     icon: "play",
     title: "Learn at Your Pace",
     body: "Recorded lessons",
+    detail: "Watch, pause and repeat a technique until it lands.",
   },
   {
     icon: "video",
     title: "Live Practice Sessions",
     body: "Guided implementation",
+    detail: "Put the method to work with a coach watching.",
   },
   {
     icon: "help",
     title: "Daily Doubt Clearing",
     body: "Get questions resolved",
+    detail: "No question waits until the next session.",
   },
   {
     icon: "handshake",
     title: "Facilitator Support",
     body: "Continuous guidance",
+    detail: "Someone tracking whether the habit is sticking.",
   },
 ] as const;
 
@@ -127,6 +222,8 @@ export const coach = {
   name: "Pradeep Acharya",
   eyebrow: "Meet Your Coach",
   bio: "A Mechanical Engineer by qualification and a Memory Coach by passion, Pradeep Acharya helps students develop practical learning, memory, focus, and recall skills.",
+  bioExtra:
+    "Over twenty years he has worked with more than 90,000 students — in schools, in workshops and at the academy — and trained under global memory experts. The approach has stayed the same throughout: give a student a method they can use, rather than tell them to study harder.",
   credibility: [
     { icon: "calendar", text: "20+ Years of Experience" },
     { icon: "users", text: "90,000+ Students Trained" },
