@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { GATE_OPENED_EVENT } from "./EnterGate";
 import { SECTION_TRACKS } from "@/content/narrationTracks";
 import { unlockAudioOnFirstInteraction } from "@/lib/unlockAudioOnFirstInteraction";
@@ -19,6 +26,39 @@ type MuteState = {
 };
 
 const MuteContext = createContext<MuteState | null>(null);
+
+/**
+ * Resolves once every section track's real `<audio>` element — the one
+ * `playSection` actually calls `.play()` on — has buffered enough to play
+ * through without stalling. A separate throwaway `Audio()` reaching
+ * `canplaythrough` does not guarantee this one has: the gate used to wait on
+ * proxies instead of the real elements, so the curtain could clear before
+ * the section that was about to sound had actually finished loading,
+ * producing a beat of silence right as the door opened. `null` until
+ * `SectionAudioPlayer` has mounted and wired the promise up.
+ */
+const ReadyContext = createContext<(() => Promise<void>) | null>(null);
+
+/**
+ * Waits for one `<audio>` element's own buffering, not a stand-in for it.
+ * Exported so the entrance gate can apply the same wait to its welcome
+ * track's real element.
+ */
+export function whenReady(audio: HTMLAudioElement) {
+  if (audio.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      audio.removeEventListener("canplaythrough", done);
+      audio.removeEventListener("error", done);
+      resolve();
+    };
+    audio.addEventListener("canplaythrough", done, { once: true });
+    // A broken track cannot hang the gate forever — counts as settled.
+    audio.addEventListener("error", done, { once: true });
+  });
+}
 
 /**
  * Reads the last-chosen mute state before paint, so a returning visitor never
@@ -221,27 +261,58 @@ export function SectionAudioPlayer({
     };
   };
 
+  // Waits on the real elements `playSection` calls `.play()` on, not on a
+  // separate set of proxy `Audio()` objects — see {@link ReadyContext}.
+  // Read lazily (only once the gate actually asks) so this never blocks on
+  // an element that mounts a tick after this provider does. Stable identity
+  // so the gate's effect (which depends on it) does not re-run on every
+  // unrelated re-render (e.g. a mute toggle).
+  const whenAllReady = useCallback(
+    () =>
+      Promise.all(
+        audios.current.map((a) => (a ? whenReady(a) : undefined)),
+      ).then(() => undefined),
+    [],
+  );
+
   return (
     <NarrationContext.Provider value={{ register }}>
       <MuteContext.Provider value={{ muted, toggle }}>
-        {SECTION_TRACKS.map((src, i) => (
-          <audio
-            key={src}
-            ref={(el) => {
-              audios.current[i] = el;
-            }}
-            src={src}
-            // The entrance gate holds the door shut until every track here has
-            // buffered (see EnterGate's preload check), so eager loading is
-            // safe rather than wasteful — by the time these can play, the
-            // browser has usually already cached the bytes from that check.
-            preload="auto"
-          />
-        ))}
-        {children}
+        <ReadyContext.Provider value={whenAllReady}>
+          {SECTION_TRACKS.map((src, i) => (
+            <audio
+              key={src}
+              ref={(el) => {
+                audios.current[i] = el;
+              }}
+              src={src}
+              // The entrance gate holds the door shut until every one of
+              // these has buffered (see EnterGate's use of ReadyContext), so
+              // eager loading is safe rather than wasteful.
+              preload="auto"
+            />
+          ))}
+          {children}
+        </ReadyContext.Provider>
       </MuteContext.Provider>
     </NarrationContext.Provider>
   );
+}
+
+/**
+ * The gate's readiness check for the section tracks — resolves once every
+ * real section `<audio>` element has buffered enough to play through.
+ * Throws outside `SectionAudioPlayer`, which always wraps `EnterGate` in
+ * practice (see `page.tsx`).
+ */
+export function useSectionTracksReady() {
+  const fn = useContext(ReadyContext);
+  if (!fn) {
+    throw new Error(
+      "useSectionTracksReady must be used within SectionAudioPlayer",
+    );
+  }
+  return fn;
 }
 
 /**

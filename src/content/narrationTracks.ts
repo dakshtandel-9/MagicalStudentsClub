@@ -17,5 +17,3 @@ export const SECTION_TRACKS = [
   "/Audio/section8.mp3",
   "/Audio/section9.mp3",
 ] as const;
-
-export const ALL_TRACKS = [WELCOME_TRACK, ...SECTION_TRACKS];

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ALL_TRACKS } from "@/content/narrationTracks";
+import { useSectionTracksReady, whenReady } from "./SectionAudioPlayer";
 
 /** How long the two halves take to clear the screen. Matches the CSS duration below. */
 const OPEN_MS = 900;
@@ -76,6 +76,7 @@ export function EnterGate() {
   // still sit over the page in every stacking context.
   const [gone, setGone] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const sectionTracksReady = useSectionTracksReady();
 
   const opening = phase === "opening";
 
@@ -117,16 +118,24 @@ export function EnterGate() {
   // resolves near-instantly and is invisible; on a slower deployed host it is
   // exactly the wait that keeps the hero narration from stuttering the moment
   // the door opens.
+  //
+  // The wait is on the real `<audio>` elements — the welcome track's own ref
+  // here, and the section tracks via `useSectionTracksReady` — not a separate
+  // set of throwaway `Audio()` proxies. A proxy reaching `canplaythrough`
+  // does not guarantee the element `playSection`/this component actually
+  // calls `.play()` on has buffered too, which used to let the curtain clear
+  // a beat before the track it was uncovering was truly ready to sound.
   useEffect(() => {
     if (phase !== "loading") return;
 
+    let cancelled = false;
     const started = Date.now();
-    let min: number | undefined;
     let pageLoaded = false;
     let audioLoaded = false;
+    let min: number | undefined;
 
     const maybeDone = () => {
-      if (!pageLoaded || !audioLoaded) return;
+      if (cancelled || !pageLoaded || !audioLoaded) return;
       // Serve out whatever is left of the minimum before moving on, so a warm
       // cache does not flash the curtain past the eye.
       const remaining = Math.max(0, MIN_LOAD_MS - (Date.now() - started));
@@ -146,30 +155,13 @@ export function EnterGate() {
       window.addEventListener("load", onPageLoaded, { once: true });
     }
 
-    // One throwaway `Audio()` per track, purely to ask the browser to fetch
-    // and buffer it — the real `<audio>` elements the gate and the section
-    // player render pick these bytes back up from the browser's HTTP cache
-    // rather than fetching a second time. `canplaythrough` means enough is
-    // buffered to play the whole file without stalling; `error` (a missing or
-    // broken file) counts the same as settled, so one bad track cannot hang
-    // the gate forever.
-    const preloaders = ALL_TRACKS.map((src) => {
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.src = src;
-      return audio;
-    });
-    let settled = 0;
-    const onTrackSettled = () => {
-      settled += 1;
-      if (settled >= preloaders.length) {
-        audioLoaded = true;
-        maybeDone();
-      }
-    };
-    preloaders.forEach((audio) => {
-      audio.addEventListener("canplaythrough", onTrackSettled, { once: true });
-      audio.addEventListener("error", onTrackSettled, { once: true });
+    const welcome = audioRef.current;
+    Promise.all([
+      welcome ? whenReady(welcome) : Promise.resolve(),
+      sectionTracksReady(),
+    ]).then(() => {
+      audioLoaded = true;
+      maybeDone();
     });
 
     // Whichever of the two is slower, this cap still wins: a bad connection
@@ -177,18 +169,12 @@ export function EnterGate() {
     const cap = window.setTimeout(() => setPhase("greeting"), MAX_LOAD_MS);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("load", onPageLoaded);
-      preloaders.forEach((audio) => {
-        audio.removeEventListener("canplaythrough", onTrackSettled);
-        audio.removeEventListener("error", onTrackSettled);
-        // Stops an in-flight fetch from a gate the visitor has already
-        // navigated away from, e.g. a fast route change in dev.
-        audio.src = "";
-      });
       window.clearTimeout(min);
       window.clearTimeout(cap);
     };
-  }, [phase]);
+  }, [phase, sectionTracksReady]);
 
   // Greeting → opening. The doors wait for the welcome to finish; if the browser
   // refuses to play it, they open at once rather than waiting on silence.

@@ -197,6 +197,12 @@ export function Footer() {
         </Container>
         </footer>
       </div>
+      {/* Being the last card, nothing after it pads the document the way every
+          other card is padded by the one that follows — so without this, the
+          deck's scroll clamp (`max = scrollHeight - innerHeight`) can fall a
+          few px short of the footer's `top-5` pin line and park it with a gap
+          above. This spacer buys enough slack for it to fully reach the pin. */}
+      <div aria-hidden className="lg:h-8" />
     </div>
   );
 }
