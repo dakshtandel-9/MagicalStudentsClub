@@ -25,12 +25,12 @@ const MIN_LOAD_MS = 900;
 const MAX_LOAD_MS = 10000;
 
 /**
- * How long the "Tap to enter" prompt waits before giving up on the tap and
- * letting the sequence continue on its own. A visitor who does not tap is
- * not kept behind the curtain: the auto-continue's play() attempt carries no
- * user gesture so the browser will refuse it again, the doors open in
- * silence, and the narration then starts at their first real interaction —
- * the unlock listener in SectionAudioPlayer is already waiting for it.
+ * How often the "Tap to enter" prompt re-tries the greeting by itself while
+ * it waits — the button pressing its own retry, not opening the doors. Where
+ * the browser's autoplay policy is the obstacle these retries are refused
+ * like the first attempt was (no timer can stand in for a user gesture), and
+ * the prompt stays up for the real tap; where autoplay is actually available
+ * the greeting starts on its own and no tap is ever needed.
  */
 const TAP_AUTO_MS = 3000;
 
@@ -101,9 +101,11 @@ export function EnterGate() {
   // waits for a tap instead of opening onto silence. The tap is the user
   // gesture that unlocks audio for the whole page.
   const [needsTap, setNeedsTap] = useState(false);
-  // The greeting attempt, re-invokable from the tap handler with the gesture
-  // attached. Owned by the greeting effect below.
-  const retryGreeting = useRef<() => void>(() => {});
+  // The greeting attempt, re-invokable from outside the greeting effect that
+  // owns it. `true` = a real tap (its failure means a broken element, so the
+  // doors open); `false` = an automatic retry (its failure is the autoplay
+  // policy saying no again — stay on the prompt and keep waiting).
+  const attemptGreeting = useRef<(fromGesture: boolean) => void>(() => {});
 
   const opening = phase === "opening";
 
@@ -256,7 +258,7 @@ export function EnterGate() {
         });
     };
 
-    retryGreeting.current = () => attempt(true);
+    attemptGreeting.current = attempt;
     attempt(false);
 
     return () => {
@@ -266,15 +268,22 @@ export function EnterGate() {
     };
   }, [phase]);
 
-  // The tap prompt only waits so long. After TAP_AUTO_MS the same retry runs
-  // by itself — as `fromGesture`, so its (inevitable, gestureless) refusal
-  // opens the doors rather than re-arming the prompt. A tap before the timer
-  // fires clears `needsTap` on success, which unmounts this effect and
-  // cancels the timer.
+  // While the prompt is up, the greeting is retried automatically every
+  // TAP_AUTO_MS — the button "pressing itself". The retry carries no user
+  // gesture, so a browser that is enforcing its autoplay policy will refuse
+  // it exactly as it refused the first attempt, and the prompt simply stays
+  // up for the next round; but where autoplay is actually available (a
+  // returning visitor, a lenient browser, a transient first failure) the
+  // greeting starts by itself and the sequence continues with no tap. The
+  // doors never open from this timer — sound arrives either by a successful
+  // retry or by a real tap.
   useEffect(() => {
     if (!needsTap || phase !== "greeting") return;
-    const auto = window.setTimeout(() => retryGreeting.current(), TAP_AUTO_MS);
-    return () => window.clearTimeout(auto);
+    const auto = window.setInterval(
+      () => attemptGreeting.current(false),
+      TAP_AUTO_MS,
+    );
+    return () => window.clearInterval(auto);
   }, [needsTap, phase]);
 
   // Opening → gone, once the halves have cleared the screen.
@@ -369,7 +378,7 @@ export function EnterGate() {
       {needsTap && !opening && (
         <button
           type="button"
-          onClick={() => retryGreeting.current()}
+          onClick={() => attemptGreeting.current(true)}
           className="absolute inset-0 flex cursor-pointer items-end justify-center bg-transparent pb-20 sm:pb-24"
         >
           <span className="border-primary/40 text-ink animate-pulse rounded-full border px-6 py-3 text-sm tracking-wide sm:text-base">
