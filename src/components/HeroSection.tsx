@@ -25,7 +25,11 @@ export function HeroSection() {
       {/* glow-x: the hero is the one panel seen whole against the page on both
           sides, so its static halo runs left and right as well as on top. */}
       <BorderGlow
-        className="glow-lg glow-x mx-3 my-3 sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]"
+        // One screen tall on every device — the phone viewport less this
+        // wrapper's `my-3` gutter (1.5rem), and one full viewport less the
+        // `my-5` gutter (2.5rem) on desktop. `dvh` on mobile so browser chrome
+        // does not push the card's bottom under the address bar.
+        className="glow-lg glow-x mx-3 my-3 h-[calc(100dvh-1.5rem)] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]"
         borderRadius={20}
         backgroundColor="var(--color-background)"
         edgeSensitivity={20}
@@ -47,8 +51,15 @@ export function HeroSection() {
       />
 
       {/* Fills the height left by the nav row, so the hero content sits centred
-          in the card rather than pinned under the nav. */}
-      <Container className="relative flex flex-1 flex-col justify-center py-12 lg:min-h-0 lg:py-4">
+          in the card rather than pinned under the nav. On a phone, if the
+          content runs past that height it scrolls here inside the card rather
+          than growing the box or clipping — `min-h-0` lets a flex child
+          actually shrink to enable the scroll, and `data-stack-scrollable`
+          keeps that scroll from advancing the deck. */}
+      <Container
+        data-stack-scrollable
+        className="relative flex min-h-0 flex-1 flex-col justify-center overflow-y-auto py-12 lg:overflow-visible lg:py-4"
+      >
         <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
           <div className="order-2 lg:order-1">
             {/* Four deliberate lines: the WHAT/HOW contrast has to land on its

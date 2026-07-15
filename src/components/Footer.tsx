@@ -28,8 +28,8 @@ export function Footer() {
       {/* The last card in the deck, with nothing stacked below it — so it is the
           only panel that glows along its bottom edge. As elsewhere, the glow
           rides this wrapper because the <footer> itself clips its overflow. */}
-      <div className="glow-lg glow-y mx-3 my-3 rounded-[20px] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]">
-        <footer className="border-primary/25 bg-background relative h-full overflow-hidden rounded-[20px] border lg:flex lg:flex-col lg:justify-center">
+      <div className="glow-lg glow-y mx-3 my-3 h-[calc(100dvh-1.5rem)] rounded-[20px] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]">
+        <footer className="border-primary/25 bg-background relative flex h-full flex-col overflow-hidden rounded-[20px] border lg:justify-center">
         {/* Pink is carried by the border, the glow and the button — not a slab
             of gradient. Keeps the card premium and the text legible. */}
         <div
@@ -41,7 +41,15 @@ export function Footer() {
           }}
         />
 
-        <Container>
+        {/* The footer has more content than a phone screen (CTA plus four link
+            columns), so on mobile it scrolls inside its own one-screen card
+            rather than growing the box. `min-h-0` lets this flex child shrink
+            to enable the scroll; on desktop it is centred by the footer's own
+            `justify-center` and does not scroll. */}
+        <Container
+          data-stack-scrollable
+          className="min-h-0 flex-1 overflow-y-auto lg:flex-none lg:overflow-visible"
+        >
           <Reveal>
             <div className="relative mx-auto max-w-2xl px-2 pt-14 pb-10 text-center sm:px-8 lg:pt-10">
               <h2

@@ -1,17 +1,22 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { BorderGlow } from "./BorderGlow";
 
-/** Content column. 1280px cap, generous gutters — per the design rules. */
+/**
+ * Content column. 1280px cap, generous gutters — per the design rules.
+ *
+ * Forwards any extra `<div>` props (e.g. `data-stack-scrollable`, so a
+ * Container that scrolls its own overflow on a phone is not read by CardStack
+ * as a deck gesture).
+ */
 export function Container({
   children,
   className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) {
+  ...rest
+}: { children: ReactNode; className?: string } & ComponentPropsWithoutRef<"div">) {
   return (
     <div
       className={`mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-10 ${className ?? ""}`}
+      {...rest}
     >
       {children}
     </div>
@@ -97,23 +102,40 @@ export function Section({
         aria-labelledby={labelledBy}
         className={[
           "border-line bg-background relative overflow-hidden rounded-[20px] border",
-          // One viewport tall on desktop, with its vertical margin and the sticky
-          // top offset accounted for, so a pinned card sits fully on screen.
-          //
-          // min-height, never a fixed height. A fixed card cannot hold content
-          // that runs taller than the viewport, so it either clips it against the
-          // overflow-hidden above or hands it to an inner scroller — and an inner
-          // scroller slides the section's own heading up under that same clipped
-          // edge the moment it is touched. A card that simply grows has neither
-          // problem: nothing is ever cut off, and the deck scrolls the taller card
-          // past like any other.
-          "px-2 py-14 sm:py-16 lg:flex lg:min-h-[calc(100vh-2.5rem)] lg:items-center lg:py-6",
+          // On phones each card is exactly one screen tall — the viewport less
+          // this wrapper's `my-3` gutter (0.75rem top + bottom = 1.5rem) — so
+          // every section reads as its own full panel rather than a ragged
+          // run of differently-sized boxes. `dvh`, not `vh`: mobile browser
+          // chrome shrinks the visible viewport, and `vh` ignores that and
+          // overshoots under the address bar.
+          "flex h-[calc(100dvh-1.5rem)] flex-col",
+          // Desktop keeps the growing card instead: min-height, never fixed, so
+          // content taller than the viewport simply extends the card and the
+          // deck scrolls it past like any other (a fixed card there would clip
+          // or hand off to a scroller that slides the heading out of view).
+          // `justify-center` centres the content in the leftover space, the way
+          // the row layout used to with `items-center`.
+          "lg:h-auto lg:min-h-[calc(100vh-2.5rem)] lg:justify-center",
           className,
         ]
           .filter(Boolean)
           .join(" ")}
       >
-        <Container className="relative">{children}</Container>
+        {/* The scroll region. On a phone a card whose content runs taller than
+            one screen scrolls here, inside its own panel, rather than growing
+            the box or clipping against the section's overflow-hidden. It is a
+            flex column so the inner block's `my-auto` centres it vertically
+            when it fits and yields to scrolling when it does not — plain
+            `justify-center` would strand the top of overflowing content
+            off-screen. `data-stack-scrollable` tells CardStack this region
+            owns its own wheel gestures. On desktop the section itself is the
+            flex parent and this collapses to a plain full-width block. */}
+        <div
+          data-stack-scrollable
+          className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto px-2 py-14 sm:py-16 lg:block lg:flex-none lg:overflow-visible lg:py-6"
+        >
+          <Container className="relative my-auto lg:my-0">{children}</Container>
+        </div>
       </section>
     </BorderGlow>
   );
