@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useSectionTracksReady, whenReady } from "./SectionAudioPlayer";
+import { WELCOME_TRACK } from "@/content/narrationTracks";
+import { audioSrc, preloadAllAudio } from "@/lib/audioPreloader";
 
 /** How long the two halves take to clear the screen. Matches the CSS duration below. */
 const OPEN_MS = 900;
@@ -48,20 +49,26 @@ export const GATE_OPENED_EVENT = "entergate:opened";
  * The curtain the site opens behind.
  *
  * Two panels meet at the middle of the screen and cover the page, with the club
- * badge beating between them. The sequence runs itself — there is no button:
+ * badge beating between them. The sequence runs itself when the browser lets
+ * it, and asks for one tap when it does not:
  *
- *   loading  — the badge pulses while the page's assets come in.
- *   greeting — the welcome plays against the closed curtain.
+ *   loading  — the badge pulses while the page (and every narration track,
+ *              in full) comes in.
+ *   greeting — the welcome plays against the closed curtain; if autoplay is
+ *              refused, a "Tap to enter" prompt collects the gesture first.
  *   opening  — the halves part, left and right, and the site is revealed.
  *
- * ## The audio is allowed to fail
+ * ## The audio is asked for politely, then unlocked by a tap
  *
  * Browsers refuse to play sound on a page the visitor has not yet interacted
- * with, and with no button there is no gesture to unlock it — so on a cold load
- * `play()` will usually reject. That is expected, not an error: the greeting is a
- * flourish, and the doors open on schedule whether or not it was allowed to
- * sound. Anything else would strand the visitor behind a curtain waiting on audio
- * that is never going to arrive.
+ * with. Autoplay is still *tried* first — a returning visitor with engagement
+ * history gets the fully automatic sequence — but when the browser refuses
+ * (the normal case on a first visit to the deployed domain), the curtain does
+ * not open onto silence. It shows "Tap to enter" instead, and that tap is the
+ * user gesture that unlocks audio for the whole page: the greeting plays, the
+ * doors part, and every section track after that is allowed to sound. If even
+ * the gesture-retry fails (broken file, exotic browser), the doors open
+ * anyway — the visitor is never stranded behind the curtain.
  *
  * ## Why the page is covered rather than withheld
  *
@@ -76,7 +83,17 @@ export function EnterGate() {
   // still sit over the page in every stacking context.
   const [gone, setGone] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const sectionTracksReady = useSectionTracksReady();
+  // Bumped once every track has fully downloaded, so the welcome `<audio>`
+  // below can swap its network `src` for the in-memory `blob:` URL before the
+  // greeting plays — same technique the section player uses for its tracks.
+  const [, setPreloaded] = useState(false);
+  // True when the browser refused to autoplay the greeting: the curtain then
+  // waits for a tap instead of opening onto silence. The tap is the user
+  // gesture that unlocks audio for the whole page.
+  const [needsTap, setNeedsTap] = useState(false);
+  // The greeting attempt, re-invokable from the tap handler with the gesture
+  // attached. Owned by the greeting effect below.
+  const retryGreeting = useRef<() => void>(() => {});
 
   const opening = phase === "opening";
 
@@ -97,7 +114,14 @@ export function EnterGate() {
     // curtain onto the middle of the page. The gate always reveals the hero.
     window.scrollTo(0, 0);
 
-    const swallow = (e: Event) => e.preventDefault();
+    const swallow = (e: Event) => {
+      // Keys aimed at the gate's own "Tap to enter" button (Enter/Space
+      // activation) must go through — everything else is scroll input and
+      // is stopped.
+      const el = e.target as HTMLElement | null;
+      if (e.type === "keydown" && el?.closest("button")) return;
+      e.preventDefault();
+    };
 
     // Not passive, or preventDefault is ignored on scroll-triggering events.
     const opts = { capture: true, passive: false } as const;
@@ -113,18 +137,17 @@ export function EnterGate() {
 
   // Loading → greeting. Held for at least MIN_LOAD_MS and at most MAX_LOAD_MS,
   // and until both the page itself and every narration track (the welcome
-  // greeting plus all nine section tracks) have finished buffering — whatever
-  // the network does in between. On a fast local connection all of this
-  // resolves near-instantly and is invisible; on a slower deployed host it is
-  // exactly the wait that keeps the hero narration from stuttering the moment
-  // the door opens.
+  // greeting plus all nine section tracks) has finished *downloading in full*.
   //
-  // The wait is on the real `<audio>` elements — the welcome track's own ref
-  // here, and the section tracks via `useSectionTracksReady` — not a separate
-  // set of throwaway `Audio()` proxies. A proxy reaching `canplaythrough`
-  // does not guarantee the element `playSection`/this component actually
-  // calls `.play()` on has buffered too, which used to let the curtain clear
-  // a beat before the track it was uncovering was truly ready to sound.
+  // `preloadAllAudio` fetches each track as a blob — so when it resolves,
+  // every byte is in memory, not merely "probably enough to stream". That is
+  // the whole fix for the deployed lag: `<audio preload="auto">` +
+  // `canplaythrough` only ever gave the browser's optimistic *estimate* that
+  // it could stream without stalling, and on a slower host that estimate fired
+  // early, the curtain opened, and `play()` then had to wait for bytes. With
+  // the bytes already downloaded and the elements pointed at `blob:` URLs,
+  // playback starts on the same frame the door opens — and on every later
+  // section the same way.
   useEffect(() => {
     if (phase !== "loading") return;
 
@@ -155,12 +178,12 @@ export function EnterGate() {
       window.addEventListener("load", onPageLoaded, { once: true });
     }
 
-    const welcome = audioRef.current;
-    Promise.all([
-      welcome ? whenReady(welcome) : Promise.resolve(),
-      sectionTracksReady(),
-    ]).then(() => {
+    preloadAllAudio().then(() => {
+      if (cancelled) return;
       audioLoaded = true;
+      // Re-render so the welcome `<audio>` picks up its blob URL before the
+      // greeting phase calls play() on it.
+      setPreloaded(true);
       maybeDone();
     });
 
@@ -174,10 +197,13 @@ export function EnterGate() {
       window.clearTimeout(min);
       window.clearTimeout(cap);
     };
-  }, [phase, sectionTracksReady]);
+  }, [phase]);
 
-  // Greeting → opening. The doors wait for the welcome to finish; if the browser
-  // refuses to play it, they open at once rather than waiting on silence.
+  // Greeting → opening. The doors wait for the welcome to finish. If the
+  // browser refuses to autoplay it (a first visit, no engagement history),
+  // the curtain shows "Tap to enter" and waits: the tap re-runs the attempt
+  // with a real user gesture attached, which the autoplay policy always
+  // honours — and that one gesture unlocks every later track on the page too.
   useEffect(() => {
     if (phase !== "greeting") return;
 
@@ -197,16 +223,31 @@ export function EnterGate() {
     // set here, before play(), rather than in the markup.
     audio.playbackRate = AUDIO_RATE;
 
-    audio
-      .play()
-      .then(() => {
-        // Playing: the doors wait on `ended`. The timer is only a safety net for
-        // an `ended` that never comes.
-        fallback = window.setTimeout(open, AUDIO_FALLBACK_MS);
-      })
-      // Blocked by the autoplay policy, which is the expected case on a cold
-      // load. Nothing is going to sound, so there is nothing to wait for.
-      .catch(open);
+    const attempt = (fromGesture: boolean) => {
+      audio
+        .play()
+        .then(() => {
+          // Playing: the tap prompt (if it was up) has served its purpose, and
+          // the doors wait on `ended`. The timer is only a safety net for an
+          // `ended` that never comes.
+          setNeedsTap(false);
+          fallback = window.setTimeout(open, AUDIO_FALLBACK_MS);
+        })
+        .catch(() => {
+          if (fromGesture) {
+            // Even a real tap could not start it — a broken element, not the
+            // autoplay policy. Nothing is going to sound; open rather than
+            // strand the visitor behind a prompt that does nothing.
+            open();
+          } else {
+            // The expected cold-load refusal: ask for the tap.
+            setNeedsTap(true);
+          }
+        });
+    };
+
+    retryGreeting.current = () => attempt(true);
+    attempt(false);
 
     return () => {
       audio.removeEventListener("ended", open);
@@ -246,9 +287,11 @@ export function EnterGate() {
       aria-modal="true"
       aria-label="Loading Magical Students Club"
     >
-      {/* Preloaded so the greeting can start the instant loading ends, rather
-          than opening the curtain on a buffering sound. */}
-      <audio ref={audioRef} src="/Audio/welcome.mp3" preload="auto" />
+      {/* Points at the in-memory `blob:` URL once the greeting has finished
+          downloading (see preloadAllAudio), so play() starts on the same
+          frame the loading phase ends rather than opening the curtain on a
+          buffering sound. Falls back to the network URL until then. */}
+      <audio ref={audioRef} src={audioSrc(WELCOME_TRACK)} preload="auto" />
 
       <div
         className={`${half} left-0 border-r ${opening ? "-translate-x-full" : "translate-x-0"}`}
@@ -298,6 +341,21 @@ export function EnterGate() {
           />
         </div>
       </div>
+
+      {/* Shown only when the browser refused to autoplay the greeting: the
+          whole curtain becomes the tap target, so any touch or click anywhere
+          is the gesture that unlocks audio and lets the sequence run. */}
+      {needsTap && !opening && (
+        <button
+          type="button"
+          onClick={() => retryGreeting.current()}
+          className="absolute inset-0 flex cursor-pointer items-end justify-center bg-transparent pb-20 sm:pb-24"
+        >
+          <span className="border-primary/40 text-ink animate-pulse rounded-full border px-6 py-3 text-sm tracking-wide sm:text-base">
+            Tap to enter
+          </span>
+        </button>
+      )}
     </div>
   );
 }
