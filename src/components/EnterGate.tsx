@@ -24,6 +24,16 @@ const MIN_LOAD_MS = 900;
  */
 const MAX_LOAD_MS = 10000;
 
+/**
+ * How long the "Tap to enter" prompt waits before giving up on the tap and
+ * letting the sequence continue on its own. A visitor who does not tap is
+ * not kept behind the curtain: the auto-continue's play() attempt carries no
+ * user gesture so the browser will refuse it again, the doors open in
+ * silence, and the narration then starts at their first real interaction —
+ * the unlock listener in SectionAudioPlayer is already waiting for it.
+ */
+const TAP_AUTO_MS = 3000;
+
 /** The greeting is played brisk rather than at its recorded pace. */
 const AUDIO_RATE = 1.25;
 
@@ -255,6 +265,17 @@ export function EnterGate() {
       window.clearTimeout(fallback);
     };
   }, [phase]);
+
+  // The tap prompt only waits so long. After TAP_AUTO_MS the same retry runs
+  // by itself — as `fromGesture`, so its (inevitable, gestureless) refusal
+  // opens the doors rather than re-arming the prompt. A tap before the timer
+  // fires clears `needsTap` on success, which unmounts this effect and
+  // cancels the timer.
+  useEffect(() => {
+    if (!needsTap || phase !== "greeting") return;
+    const auto = window.setTimeout(() => retryGreeting.current(), TAP_AUTO_MS);
+    return () => window.clearTimeout(auto);
+  }, [needsTap, phase]);
 
   // Opening → gone, once the halves have cleared the screen.
   useEffect(() => {
