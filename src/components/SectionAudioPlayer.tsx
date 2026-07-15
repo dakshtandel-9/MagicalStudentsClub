@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { GATE_OPENED_EVENT } from "./EnterGate";
 import { SECTION_TRACKS } from "@/content/narrationTracks";
+import { unlockAudioOnFirstInteraction } from "@/lib/unlockAudioOnFirstInteraction";
 
 const MUTE_STORAGE_KEY = "msc:narration-muted";
 
@@ -68,22 +69,39 @@ export function SectionAudioPlayer({
   // has finished and the curtain has cleared.
   const gateHeld = useRef(true);
 
+  // Tries to (re)start whatever section is currently active. Used wherever a
+  // gate that was blocking playback has just lifted — the gate opening, an
+  // unmute, or the visitor's first interaction unlocking autoplay — so a
+  // browser that refused the very first attempt still ends up sounding once
+  // any of those later happen.
+  const tryPlayActive = () => {
+    const i = active.current;
+    if (i === null || mutedRef.current || gateHeld.current) return;
+    const audio = audios.current[i];
+    if (!audio || !audio.paused) return;
+    audio.play().catch(() => {
+      // Still refused — nothing left to retry from here but the visitor's
+      // own next interaction, which the listener below is waiting for.
+    });
+  };
+
   useEffect(() => {
     const onGateOpened = () => {
       gateHeld.current = false;
-      // The active section was already decided while held (see `playSection`
-      // below) — this is the first moment it is actually allowed to sound.
-      const i = active.current;
-      if (i === null || mutedRef.current) return;
-      audios.current[i]?.play().catch(() => {
-        // Autoplay still refused even after a real reveal — no gesture has
-        // reached the page yet. The mute button remains available.
-      });
+      tryPlayActive();
     };
 
     window.addEventListener(GATE_OPENED_EVENT, onGateOpened);
     return () => window.removeEventListener(GATE_OPENED_EVENT, onGateOpened);
   }, []);
+
+  // A fresh production domain has no autoplay history with the browser, so a
+  // real first-time visitor's very first `play()` call is routinely refused —
+  // silently, by design, everywhere in this file. This is what actually
+  // starts the narration for that visitor: the moment they interact with the
+  // page at all (click, tap, key, or scroll), retry whatever should currently
+  // be sounding.
+  useEffect(() => unlockAudioOnFirstInteraction(tryPlayActive), []);
 
   const toggle = () => {
     setMuted((m) => {
@@ -99,17 +117,10 @@ export function SectionAudioPlayer({
   useEffect(() => {
     const i = active.current;
     if (i === null) return;
-    const audio = audios.current[i];
-    if (!audio) return;
-
     if (muted) {
-      audio.pause();
-    } else if (!gateHeld.current) {
-      audio.play().catch(() => {
-        // Still blocked by the autoplay policy (e.g. unmuted before any
-        // gesture reached the page) — the button remains available to try
-        // again, so failing silently here is correct.
-      });
+      audios.current[i]?.pause();
+    } else {
+      tryPlayActive();
     }
   }, [muted]);
 
@@ -126,17 +137,12 @@ export function SectionAudioPlayer({
     if (!audio) return;
 
     audio.currentTime = 0;
-    // Held while the entrance gate is still up: `onGateOpened` above plays
-    // whatever is active the moment it releases, so there is nothing more to
-    // do here until then.
-    if (mutedRef.current || gateHeld.current) return;
-
-    audio.play().catch(() => {
-      // Blocked by the browser's autoplay policy before any user gesture has
-      // reached the page. Playback simply does not start; the visitor can
-      // still un-mute manually once they have interacted with the page, and
-      // the next section change will try again from its own track.
-    });
+    // If held or muted, `tryPlayActive` is a no-op here — the gate opening,
+    // an unmute, or the visitor's first interaction will each try again later
+    // and pick up this section from the top, since `currentTime` is already
+    // reset. If autoplay simply refuses despite none of those holds being in
+    // effect, the first-interaction listener is still there to retry.
+    tryPlayActive();
   };
 
   useEffect(() => {
