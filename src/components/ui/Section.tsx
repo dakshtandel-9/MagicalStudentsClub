@@ -103,12 +103,13 @@ export function Section({
         className={[
           "border-line bg-background relative overflow-hidden rounded-[20px] border",
           // On phones each card is exactly one screen tall — the viewport less
-          // this wrapper's `my-3` gutter (0.75rem top + bottom = 1.5rem) — so
-          // every section reads as its own full panel rather than a ragged
-          // run of differently-sized boxes. `dvh`, not `vh`: mobile browser
-          // chrome shrinks the visible viewport, and `vh` ignores that and
-          // overshoots under the address bar.
-          "flex h-[calc(100dvh-1.5rem)] flex-col",
+          // this wrapper's gutter (`my-3` = 1.5rem total, `sm:my-4` = 2rem) —
+          // so every section reads as its own full panel rather than a ragged
+          // run of differently-sized boxes, and the snap pins land exactly.
+          // `dvh`, not `vh`: mobile browser chrome shrinks the visible
+          // viewport, and `vh` ignores that and overshoots under the address
+          // bar.
+          "flex h-[calc(100dvh-1.5rem)] flex-col sm:h-[calc(100dvh-2rem)]",
           // Desktop keeps the growing card instead: min-height, never fixed, so
           // content taller than the viewport simply extends the card and the
           // deck scrolls it past like any other (a fixed card there would clip

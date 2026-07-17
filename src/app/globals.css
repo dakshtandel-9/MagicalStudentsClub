@@ -18,13 +18,18 @@
 
 @layer base {
   /*
-   * No `scroll-snap-type` here, deliberately.
+   * No `scroll-snap-type` here — deliberately, for desktop.
    *
    * Snapping settles the page only *after* native momentum has spent itself, so
-   * one hard flick still sails past several cards before snapping back to the
-   * nearest — the opposite of one-gesture-one-card. CardStack therefore takes
-   * the wheel itself and drives the scroll, and a snap container would only
-   * fight it for the final position.
+   * one hard wheel flick still sails past several cards before snapping back to
+   * the nearest — the opposite of one-gesture-one-card. CardStack therefore
+   * takes the wheel itself and drives the scroll, and a snap container would
+   * only fight it for the final position.
+   *
+   * A touch gesture cannot be taken over the same way, so below lg the deck
+   * snaps after all — with `scroll-snap-stop: always` on the card sentinels
+   * capping momentum at one card per flick, which is the same promise by CSS
+   * means. See "the phone deck" below.
    */
   html {
     scroll-behavior: smooth;
@@ -165,6 +170,44 @@
     );
     background-size: 1px 12px;
     background-repeat: repeat-y;
+  }
+}
+
+/*
+ * The phone deck.
+ *
+ * Below lg the cards stack exactly as on desktop — sticky, each riding up and
+ * covering the pinned one before it — but the scroll stays native: a touch
+ * gesture cannot be intercepted and re-driven the way a wheel can. Two rules
+ * stand in for the desktop wheel handler:
+ *
+ *   1. Mandatory snap on the card sentinels. A swipe can only ever come to
+ *      rest with a card pinned — never half-risen — and `scroll-snap-stop:
+ *      always` on those sentinels caps the hardest flick at one card:
+ *      one-gesture-one-card, by CSS means.
+ *
+ *   2. A card's own scroller ([data-stack-scrollable]) opens only once its
+ *      card has pinned. Until then, a swipe on a still-rising card must deal
+ *      the deck — ride the card up to its pin — not slide the words on the
+ *      card. StackItem flags the pin line crossing with `data-stack-pinned`,
+ *      and the overflow opens and shuts with it. Native scroll chaining does
+ *      the rest: a pinned card scrolls its own content to the end, and the
+ *      next swipe falls through to the page and calls up the next card.
+ *
+ * Scoped to the deck (`data-card-stack`), so the flowing inner pages — no
+ * pins, no sentinels — keep fully native scrolling.
+ */
+@media (max-width: 1023.98px) {
+  html:has([data-card-stack]) {
+    scroll-snap-type: y mandatory;
+  }
+
+  [data-card-stack] [data-stack-scrollable] {
+    overflow-y: hidden;
+  }
+
+  [data-card-stack] [data-stack-pinned] [data-stack-scrollable] {
+    overflow-y: auto;
   }
 }
 

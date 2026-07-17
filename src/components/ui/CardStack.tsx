@@ -10,11 +10,32 @@ import {
   type ReactNode,
 } from "react";
 
-/** Matches `lg:top-5` on StackItem — the offset a card pins at. */
+/**
+ * The offsets a card pins at — matching StackItem's `top-3 sm:top-4 lg:top-5`,
+ * which in turn match the cards' own `my-3 sm:my-4 lg:my-5` gutters, so a
+ * pinned card keeps the same strip of background above it that it has in flow.
+ */
 const STICKY_TOP_PX = 20;
+const STICKY_TOP_SM_PX = 16;
+const STICKY_TOP_PHONE_PX = 12;
 
-/** The stack behaviour is desktop-only, same as the sticky classes themselves. */
+/**
+ * Above lg the deck drives the scroll itself — the wheel and key handlers
+ * below. Below lg the cards still stack (sticky, rising z-index), but the
+ * scroll stays native: a touch gesture cannot be intercepted and re-driven
+ * the way a wheel can, so mandatory scroll-snap lands every swipe on a pin
+ * instead (see the phone-deck block in globals.css).
+ */
 const DESKTOP = "(min-width: 1024px)";
+
+/** The sm breakpoint — only the pin offset changes across it. */
+const TABLET = "(min-width: 640px)";
+
+/** The pin offset currently in force. */
+function stickyTopPx(desktop: MediaQueryList, tablet: MediaQueryList) {
+  if (desktop.matches) return STICKY_TOP_PX;
+  return tablet.matches ? STICKY_TOP_SM_PX : STICKY_TOP_PHONE_PX;
+}
 
 /**
  * How long a card takes to travel to the top. Long enough to read as a
@@ -101,10 +122,14 @@ const StackContext = createContext<Registry | null>(null);
  * while the following card scrolls up and covers it — sections overtake each
  * other instead of scrolling past.
  *
- * Sticky is inert on browsers that lack it (the cards simply scroll normally),
- * and the whole effect is confined to lg and up — on phones a stack of
- * overlapping full-height cards would be unusable, so there the sections flow
- * one after another.
+ * Sticky is inert on browsers that lack it (the cards simply scroll normally).
+ * The stack itself works on every viewport; what differs is who drives the
+ * scroll. On desktop the wheel handler below owns it. On phones the scroll is
+ * native, and two CSS pieces (globals.css, "the phone deck") stand in for the
+ * handler: mandatory snap on the sentinels lands every swipe with a card
+ * pinned, and each card's own scroller stays shut until its card has pinned —
+ * flagged here via `data-stack-pinned` — so a swipe on a still-rising card
+ * deals the deck rather than sliding the card's content.
  *
  * Note: `position: sticky` fails inside any ancestor with `overflow: hidden`.
  * The stack therefore sets no overflow of its own, and globals.css puts
@@ -167,7 +192,7 @@ export function CardStack({ children }: { children: ReactNode }) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const onWheel = (e: WheelEvent) => {
-      // Below lg the deck does not stack, so the page scrolls normally.
+      // Below lg the scroll is native — snap does the parking there.
       if (!desktop.matches) return;
 
       // A wheel event inside a scrollable region (a card whose content overflows
@@ -433,7 +458,12 @@ export function CardStack({ children }: { children: ReactNode }) {
 
   return (
     <StackContext.Provider value={registry}>
-      <div className="lg:relative">{children}</div>
+      {/* `data-card-stack` scopes the phone-deck CSS (snap + gated scrollers)
+          to pages that actually have a deck — the flowing inner pages must
+          never have their scrolling touched. */}
+      <div data-card-stack className="lg:relative">
+        {children}
+      </div>
     </StackContext.Provider>
   );
 }
@@ -471,9 +501,12 @@ export function StackItem({
   useEffect(() => {
     const card = cardRef.current;
     const sentinel = sentinelRef.current;
-    if (!card || !sentinel || !parks) return;
+    if (!card || !sentinel) return;
 
     const desktop = window.matchMedia(DESKTOP);
+    const tablet = window.matchMedia(TABLET);
+
+    let observer: IntersectionObserver | undefined;
 
     // The card itself cannot be observed to find out whether it has stuck: once
     // pinned it stays pinned at the top of the viewport with its full height
@@ -483,40 +516,55 @@ export function StackItem({
     // normal flow, so unlike the card it keeps scrolling. Pulling the observer
     // root down by the sticky offset puts the boundary exactly on the pin line:
     // the moment the sentinel leaves the root through the top, the card's own
-    // top has reached that line and it has parked.
+    // top has reached that line and it has pinned.
     //
     // Which edge it left by is the whole question, and `isIntersecting` alone
     // cannot answer it — a sentinel still far below the fold is just as
     // "not intersecting" as one that has scrolled off the top. So the sign of
-    // the sentinel's position decides: above the pin line means parked; below
+    // the sentinel's position decides: above the pin line means pinned; below
     // the viewport means the card is simply not there yet.
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const parked =
-          !entry.isIntersecting &&
-          entry.boundingClientRect.top <= STICKY_TOP_PX;
-        card.toggleAttribute("data-parked", parked);
-      },
-      { rootMargin: `-${STICKY_TOP_PX}px 0px 0px 0px`, threshold: 0 },
-    );
-
     const sync = () => {
-      observer.disconnect();
-      if (desktop.matches) {
-        observer.observe(sentinel);
-      } else {
-        // Below lg nothing sticks, so nothing parks — clear any stale flag left
-        // behind by a resize down from desktop.
-        card.removeAttribute("data-parked");
-      }
+      observer?.disconnect();
+      // The boundary sits 2px *past* the pin line, never on it. A card at
+      // rest sits exactly on the line — that is what pinning means — and a
+      // sentinel exactly on the root's edge still counts as intersecting, so
+      // a boundary on the line itself would never see the landing cross it
+      // and the flags would never flip. Two pixels down, every landing
+      // decisively crosses. Rebuilt on breakpoint change because the pin
+      // offset moves and rootMargin cannot be updated in place.
+      const boundary = stickyTopPx(desktop, tablet) + 2;
+
+      observer = new IntersectionObserver(
+        (entries) => {
+          // Only the newest record matters: acting on an older one would leave
+          // the flags describing a state the card has already left. And the
+          // rect alone decides the side — `isIntersecting` is false both far
+          // below the fold and past the pin, and ambiguous exactly on the
+          // boundary, so it cannot.
+          const entry = entries[entries.length - 1];
+          const pinned = entry.boundingClientRect.top <= boundary;
+
+          // Gates the card's own scroller on phones: until the card has
+          // pinned, a swipe on it must deal the deck, not slide the card's
+          // content. The CSS lives in globals.css ("the phone deck").
+          card.toggleAttribute("data-stack-pinned", pinned);
+
+          // The glow douse — hero exempt (see `parks` above).
+          if (parks) card.toggleAttribute("data-parked", pinned);
+        },
+        { rootMargin: `-${boundary}px 0px 0px 0px`, threshold: 0 },
+      );
+      observer.observe(sentinel);
     };
 
     sync();
     desktop.addEventListener("change", sync);
+    tablet.addEventListener("change", sync);
 
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
       desktop.removeEventListener("change", sync);
+      tablet.removeEventListener("change", sync);
     };
   }, [parks]);
 
@@ -526,14 +574,29 @@ export function StackItem({
           observer above watches it to know when the card has parked. The card
           itself can do neither job — once parked it is sticky and has stopped
           moving with the scroller. Zero-height so it measures a position, not
-          an area. */}
-      <div ref={sentinelRef} aria-hidden className="h-0" />
+          an area.
+
+          On phones it is also the card's snap point: the deck's snap container
+          (globals.css) only exists below lg, so `snap-start`/`snap-always` are
+          inert on desktop, where the wheel handler drives instead. The snap
+          target must be this sentinel and never the card — a stuck sticky box
+          rides at the pin for its whole range, so a snap position computed
+          from it would be satisfied by *every* scroll offset in that range and
+          mandatory snap would stop meaning anything. `snap-always` caps the
+          hardest flick at one card; `scroll-mt` matches the pin offsets, so
+          snapping and sticking agree about where "parked" is. */}
+      <div
+        ref={sentinelRef}
+        aria-hidden
+        className="h-0 snap-start snap-always scroll-mt-3 sm:scroll-mt-4"
+      />
       <div
         ref={cardRef}
         // Pins just below the top of the viewport, so a stuck card keeps a strip
         // of background above it and its rounded top corners stay clear of the
-        // screen edge — matching the margin it has when scrolling freely.
-        className="lg:sticky lg:top-5"
+        // screen edge — matching the margin it has when scrolling freely, at
+        // every breakpoint (top-3/4/5 ↔ the cards' my-3/4/5).
+        className="sticky top-3 sm:top-4 lg:top-5"
         // z-index must rise with position so each card covers the one before it.
         // Inline because Tailwind cannot generate a class from a runtime value.
         style={{ zIndex: index + 1 }}

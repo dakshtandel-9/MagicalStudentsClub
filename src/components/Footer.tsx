@@ -28,7 +28,7 @@ export function Footer() {
       {/* The last card in the deck, with nothing stacked below it — so it is the
           only panel that glows along its bottom edge. As elsewhere, the glow
           rides this wrapper because the <footer> itself clips its overflow. */}
-      <div className="glow-lg glow-y mx-3 my-3 h-[calc(100dvh-1.5rem)] rounded-[20px] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]">
+      <div className="glow-lg glow-y mx-3 my-3 h-[calc(100dvh-1.5rem)] rounded-[20px] sm:mx-5 sm:my-4 sm:h-[calc(100dvh-2rem)] lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]">
         <footer className="border-primary/25 bg-background relative flex h-full flex-col overflow-hidden rounded-[20px] border lg:justify-center">
         {/* Pink is carried by the border, the glow and the button — not a slab
             of gradient. Keeps the card premium and the text legible. */}

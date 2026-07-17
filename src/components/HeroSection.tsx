@@ -29,7 +29,7 @@ export function HeroSection() {
         // wrapper's `my-3` gutter (1.5rem), and one full viewport less the
         // `my-5` gutter (2.5rem) on desktop. `dvh` on mobile so browser chrome
         // does not push the card's bottom under the address bar.
-        className="glow-lg glow-x mx-3 my-3 h-[calc(100dvh-1.5rem)] sm:mx-5 sm:my-4 lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]"
+        className="glow-lg glow-x mx-3 my-3 h-[calc(100dvh-1.5rem)] sm:mx-5 sm:my-4 sm:h-[calc(100dvh-2rem)] lg:mx-6 lg:my-5 lg:h-[calc(100vh-2.5rem)]"
         borderRadius={20}
         backgroundColor="var(--color-background)"
         edgeSensitivity={20}
@@ -55,16 +55,28 @@ export function HeroSection() {
           content runs past that height it scrolls here inside the card rather
           than growing the box or clipping — `min-h-0` lets a flex child
           actually shrink to enable the scroll, and `data-stack-scrollable`
-          keeps that scroll from advancing the deck. */}
-      <Container
+          keeps that scroll from advancing the deck.
+
+          Centring is `my-auto` on the inner column, never `justify-content` on
+          this scroller: centring content taller than a scroller strands its
+          top half above the scrollport, unreachably — which is how the phone
+          hero used to open on the featured-in strip with the portrait and
+          headline lost off the top. Auto margins collapse to zero once the
+          content overflows, so the same markup centres when it fits and
+          scrolls from the very top when it does not. */}
+      <div
         data-stack-scrollable
-        className="relative flex min-h-0 flex-1 flex-col justify-center overflow-y-auto py-12 lg:overflow-visible lg:py-4"
+        className="relative flex min-h-0 flex-1 flex-col overflow-y-auto lg:overflow-visible"
       >
-        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
+        <Container className="my-auto py-6 sm:py-10 lg:py-4">
+        <div className="grid items-center gap-6 sm:gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
           <div className="order-2 lg:order-1">
             {/* Four deliberate lines: the WHAT/HOW contrast has to land on its
-                own line for the antithesis to read. */}
-            <h1 className="font-display text-ink text-[2.1rem] leading-[1.12] font-bold sm:text-[2.75rem] lg:text-[3.25rem]">
+                own line for the antithesis to read. The phone size is clamped
+                against the viewport so the longest line ("Schools tell your
+                child") never wraps and breaks the four-line lockup on a
+                narrow screen. */}
+            <h1 className="font-display text-ink text-[clamp(1.5rem,7vw,2.1rem)] leading-[1.12] font-bold sm:text-[2.75rem] lg:text-[3.25rem]">
               <span className="block">Schools tell your child</span>
               <span className="block">
                 <span className="text-muted">WHAT</span> to study.
@@ -75,13 +87,13 @@ export function HeroSection() {
               </span>
             </h1>
 
-            <p className="text-muted mt-6 max-w-xl text-[15px] leading-relaxed text-pretty sm:text-base">
+            <p className="text-muted mt-4 max-w-xl text-[15px] leading-relaxed text-pretty sm:mt-6 sm:text-base">
               {hero.supporting}
             </p>
 
             {/* Capped so the floating WhatsApp button in the bottom-right can
                 never come to rest on top of a CTA on a phone. */}
-            <div className="mt-8 flex max-w-[19rem] flex-col gap-3 sm:max-w-none sm:flex-row sm:items-center">
+            <div className="mt-6 flex max-w-[19rem] flex-col gap-3 sm:mt-8 sm:max-w-none sm:flex-row sm:items-center">
               <ButtonLink href={whatsappHref} size="lg">
                 <WhatsAppGlyph className="size-[18px]" />
                 Chat on WhatsApp
@@ -115,8 +127,17 @@ export function HeroSection() {
                 the row height — and therefore whether the featured-in strip and
                 the stats bar still fit inside the 100vh card. Cap it against the
                 viewport so a short screen shrinks the portrait instead of
-                pushing the stats bar out through the card's bottom edge. */}
-            <div className="relative mx-auto flex max-h-[42vh] max-w-[300px] items-end justify-center sm:max-w-[400px] lg:max-h-[42vh] lg:max-w-[440px]">
+                pushing the stats bar out through the card's bottom edge.
+
+                The phone cap is the tighter 30dvh: the first screen of the
+                card has to hold the nav, the portrait AND the whole four-line
+                headline — face and thesis together — with the rest arriving
+                on the card's own scroll. Below lg the cap sits on the image
+                itself, not this wrapper: `max-h-full` on the image cannot
+                resolve against a wrapper whose own height is auto, so a
+                wrapper-only cap lets the image spill past it and crop into
+                the nav. */}
+            <div className="relative mx-auto flex max-w-[300px] items-end justify-center sm:max-w-[400px] lg:max-h-[42vh] lg:max-w-[440px]">
               {/* The source cutout is square and ends in a flat bottom edge.
                   Fade the last strip out so it dissolves into the page instead
                   of stopping on a hard horizontal line. */}
@@ -127,7 +148,7 @@ export function HeroSection() {
                 height={500}
                 priority
                 sizes="(max-width: 1024px) 400px, 480px"
-                className="h-auto max-h-full w-full object-contain [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
+                className="h-auto max-h-[30dvh] w-full object-contain sm:max-h-[38dvh] lg:max-h-full [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
               />
 
               {/* Experience callout, clear of the portrait's lower edge. */}
@@ -145,14 +166,15 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="mt-12 lg:mt-8">
+        <div className="mt-10 lg:mt-8">
           <FeaturedIn />
         </div>
 
         <div className="mt-8 lg:mt-6">
           <StatsBar />
         </div>
-      </Container>
+        </Container>
+      </div>
         </section>
       </BorderGlow>
     </div>
