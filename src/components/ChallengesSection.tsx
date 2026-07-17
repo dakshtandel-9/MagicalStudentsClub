@@ -33,6 +33,17 @@ export function ChallengesSection() {
               icon={item.icon as IconName}
               title={item.title}
               body={item.body}
+              // Below `sm` this grid is a single column, so every card runs
+              // full width; from `sm` to `lg` it's 2-up, so only the
+              // right-hand column (odd index) borders the card's edge and can
+              // land behind the fixed WhatsApp/mute/back-to-top column — see
+              // "Clearance for the floating button column" in globals.css.
+              // `--fab-clear` resolves to 0 at `lg` and up.
+              contentClassName={
+                i % 2 === 1
+                  ? "pr-[var(--fab-clear)]"
+                  : "pr-[var(--fab-clear)] sm:pr-6"
+              }
             />
           </Reveal>
         ))}

@@ -30,7 +30,17 @@ export function ProgramsSection() {
               hover
               as="article"
               className="h-full"
-              contentClassName="flex flex-col p-5 lg:p-6"
+              // Below `sm` this grid is a single column, so every card runs
+              // full width; from `sm` to `lg` it's 2-up, so only the
+              // right-hand column (odd index) borders the card's edge and can
+              // land behind the fixed WhatsApp/mute/back-to-top column — see
+              // "Clearance for the floating button column" in globals.css.
+              // `--fab-clear` resolves to 0 at `lg` and up.
+              contentClassName={[
+                "flex flex-col p-5 lg:p-6",
+                "pr-[calc(1.25rem+var(--fab-clear))]",
+                i % 2 === 1 ? "sm:pr-[calc(1.25rem+var(--fab-clear))]" : "sm:pr-5",
+              ].join(" ")}
             >
               <IconChip name={program.icon as IconName} />
 

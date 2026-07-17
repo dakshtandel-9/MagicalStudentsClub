@@ -105,7 +105,13 @@ function RhythmColumn({
             <Card
               hover
               className="h-full"
-              contentClassName="flex items-start gap-4 p-6"
+              // Below `lg` the outer grid is a single column (`lg:grid-cols-`
+              // is the only column split), so every card here runs full width
+              // and can end up scrolled behind the fixed WhatsApp/mute/
+              // back-to-top column — see "Clearance for the floating button
+              // column" in globals.css. `--fab-clear` itself resolves to 0 at
+              // `lg` and up, so no override is needed there.
+              contentClassName="flex items-start gap-4 p-6 pr-[calc(1.5rem+var(--fab-clear))]"
             >
               <span
                 className={[

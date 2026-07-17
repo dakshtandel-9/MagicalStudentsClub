@@ -41,7 +41,13 @@ export function FAQSection() {
                     native disclosure behaviour to work. */}
                 <BorderGlow className="bg-card border-line border">
                   <details name="faq" className="group">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 sm:px-5 [&::-webkit-details-marker]:hidden">
+                    {/* Full width at every breakpoint below `lg` (no column
+                        split in this list), so the toggle icon at its right
+                        edge can land behind the fixed WhatsApp/mute/
+                        back-to-top column — see "Clearance for the floating
+                        button column" in globals.css. `--fab-clear` resolves
+                        to 0 at `lg` and up. */}
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 pr-[calc(1rem+var(--fab-clear))] sm:px-5 sm:pr-[calc(1.25rem+var(--fab-clear))] [&::-webkit-details-marker]:hidden">
                       <h3 className="text-ink text-[15px] font-medium">
                         {faq.q}
                       </h3>

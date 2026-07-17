@@ -177,37 +177,78 @@
  * The phone deck.
  *
  * Below lg the cards stack exactly as on desktop — sticky, each riding up and
- * covering the pinned one before it — but the scroll stays native: a touch
- * gesture cannot be intercepted and re-driven the way a wheel can. Two rules
- * stand in for the desktop wheel handler:
- *
- *   1. Mandatory snap on the card sentinels. A swipe can only ever come to
- *      rest with a card pinned — never half-risen — and `scroll-snap-stop:
- *      always` on those sentinels caps the hardest flick at one card:
- *      one-gesture-one-card, by CSS means.
- *
- *   2. A card's own scroller ([data-stack-scrollable]) opens only once its
- *      card has pinned. Until then, a swipe on a still-rising card must deal
- *      the deck — ride the card up to its pin — not slide the words on the
- *      card. StackItem flags the pin line crossing with `data-stack-pinned`,
- *      and the overflow opens and shuts with it. Native scroll chaining does
- *      the rest: a pinned card scrolls its own content to the end, and the
- *      next swipe falls through to the page and calls up the next card.
- *
- * Scoped to the deck (`data-card-stack`), so the flowing inner pages — no
- * pins, no sentinels — keep fully native scrolling.
+ * covering the pinned one before it — and CardStack.tsx drives the scroll
+ * itself there too, via touch handlers mirroring its desktop wheel handler
+ * (see the block comment on `DESKTOP` in that file for why: CSS scroll-snap
+ * cannot express "wait until this card's content is read", and pushed hard
+ * enough to fake it, Chrome's mandatory-snap resolver simply refuses to
+ * scroll at all). Nothing here drives the deck — only closes off the one gap
+ * native touch-scroll would otherwise leave, and clips the x-axis.
  */
 @media (max-width: 1023.98px) {
-  html:has([data-card-stack]) {
-    scroll-snap-type: y mandatory;
-  }
-
   [data-card-stack] [data-stack-scrollable] {
-    overflow-y: hidden;
+    /* The x-axis is pinned shut at all times: setting any overflow-y forces
+       a computed overflow-x of `auto`, and a card whose decoration or content
+       pokes a few px wide would otherwise become a sideways panner. */
+    overflow-x: hidden;
   }
+}
 
-  [data-card-stack] [data-stack-pinned] [data-stack-scrollable] {
-    overflow-y: auto;
+/*
+ * Clearance for the floating button column (mute, back-to-top, WhatsApp —
+ * WhatsAppFloatingButton.tsx) on phone and tablet.
+ *
+ * That column is `position: fixed` to the *viewport*, in the bottom-right
+ * corner only — it does not run the full height of the screen, so reserving
+ * its footprint as permanent right padding on the *whole* scroll region was
+ * tried and reverted twice:
+ *
+ *   - Right-padding only, never matched on the left: keeps every card's
+ *     content at full width, but a `mx-auto` container centres itself against
+ *     a box that is narrower on the right than the left, so the whole column
+ *     reads as shifted left with a too-wide gutter on the right.
+ *   - Padding matched on both sides to fix that centring: content is visually
+ *     centred again, but the column loses `--fab-clear` of width on *both*
+ *     sides instead of just one, and every card's internal layout — sized
+ *     against the original, wider column — started clipping its own content
+ *     (StatsBar's "90,000+" truncating to "90", the WhatsApp button's label
+ *     sliding under its own icon).
+ *
+ * A third approach — a `float: right`, `position: sticky` spacer element that
+ * only narrows the trailing stretch of the scroll region, letting text above
+ * it wrap at full width — was also tried and abandoned: floats have no effect
+ * on flex/grid children per spec, and every card's content here is laid out
+ * with flex or grid (StatsBar's stat grid, FeatureCard grids, etc.), so nothing
+ * would ever actually reflow around it.
+ *
+ * There is no single global rule that reserves clearance in one corner only
+ * for arbitrary flex/grid content, so this is handled per component instead:
+ * whichever element in a given card's layout can actually land nearest the
+ * fixed corner (the last stat row in StatsBar, the last CTA row in the hero,
+ * etc.) carries its own right clearance directly. See `--fab-clear` usages at
+ * each call site, and WhatsAppFloatingButton.tsx for the column's own metrics.
+ *
+ * `--fab-clear` matches size-12 (48px) + right-7 (28px) = 76px at the base
+ * breakpoint, and size-14 (56px) + right-10 (40px) = 96px from `sm` up — the
+ * exact button/offset sizes in WhatsAppFloatingButton.tsx. If those ever
+ * change, every call site below must change with them.
+ */
+:root {
+  /* 0 on desktop: the deck's centred column already leaves the corner empty
+     there (see BorderGlow/Container's generous max-width gutters), so there
+     is nothing to clear. */
+  --fab-clear: 0px;
+}
+
+@media (max-width: 1023.98px) {
+  :root {
+    --fab-clear: 76px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  :root {
+    --fab-clear: 96px;
   }
 }
 

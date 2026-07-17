@@ -19,12 +19,14 @@ import { Section } from "./ui/Section";
  */
 function VideoTestimonial({
   item,
+  className,
 }: {
   item: (typeof videoTestimonials)[number];
+  className?: string;
 }) {
   if (item.placeholder || !item.youtubeId) {
     return (
-      <Card className="border-dashed" contentClassName="p-0">
+      <Card className={["border-dashed", className].filter(Boolean).join(" ")} contentClassName="p-0">
         <div className="flex aspect-video flex-col items-center justify-center gap-2 p-4 text-center">
           <span className="border-line text-muted inline-flex size-10 items-center justify-center rounded-full border">
             <Play className="size-4" aria-hidden />
@@ -40,7 +42,10 @@ function VideoTestimonial({
     // `overflow-hidden` dropped: it would clip the card's outer bloom. The
     // thumbnail is still clipped to the rounded corners — Card does that on its
     // inner wrapper, inside the glow layers.
-    <Card className="group relative" contentClassName="p-0">
+    <Card
+      className={["group relative", className].filter(Boolean).join(" ")}
+      contentClassName="p-0"
+    >
       <a
         href={`https://www.youtube.com/watch?v=${item.youtubeId}`}
         target="_blank"
@@ -79,12 +84,18 @@ function VideoTestimonial({
 
 function WrittenTestimonial({
   item,
+  contentClassName,
 }: {
   item: (typeof writtenTestimonials)[number];
+  /** Appended to the base `p-6`. */
+  contentClassName?: string;
 }) {
   if (item.placeholder || !item.quote) {
     return (
-      <Card className="border-dashed" contentClassName="p-6">
+      <Card
+        className="border-dashed"
+        contentClassName={["p-6", contentClassName].filter(Boolean).join(" ")}
+      >
         <Quote className="text-muted/40 size-6" aria-hidden />
         <p className="text-muted mt-4 text-sm">
           Written testimonial
@@ -104,7 +115,7 @@ function WrittenTestimonial({
     .slice(0, 2);
 
   return (
-    <Card contentClassName="p-6">
+    <Card contentClassName={["p-6", contentClassName].filter(Boolean).join(" ")}>
       <Quote className="text-primary size-6" aria-hidden />
       <blockquote className="text-ink mt-4 text-[15px] leading-relaxed">
         {item.quote}
@@ -157,7 +168,15 @@ export function ResultsSection() {
           <div className="mt-7 grid gap-3">
             {results.map((result, i) => (
               <Reveal key={result.title} delay={i * 80}>
-                <Card hover contentClassName="flex items-start gap-4 p-5">
+                {/* Full width at every breakpoint below `lg` (no column split
+                    in this list), so this card's right edge can land behind
+                    the fixed WhatsApp/mute/back-to-top column — see
+                    "Clearance for the floating button column" in
+                    globals.css. `--fab-clear` resolves to 0 at `lg` and up. */}
+                <Card
+                  hover
+                  contentClassName="flex items-start gap-4 p-5 pr-[calc(1.25rem+var(--fab-clear))]"
+                >
                   <IconChip name={result.icon as IconName} size="sm" />
                   <div>
                     <h3 className="text-ink text-[15px] font-semibold">
@@ -194,8 +213,21 @@ export function ResultsSection() {
 
           <Reveal delay={80}>
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
-              {videoTestimonials.map((item) => (
-                <VideoTestimonial key={item.id} item={item} />
+              {videoTestimonials.map((item, i) => (
+                <VideoTestimonial
+                  key={item.id}
+                  item={item}
+                  // Below `sm` this grid is a single column, so both cards run
+                  // full width; from `sm` up it's 2-up, so only the
+                  // right-hand column (odd index) needs to clear the fixed
+                  // WhatsApp/mute/back-to-top column — see "Clearance for the
+                  // floating button column" in globals.css.
+                  className={
+                    i % 2 === 1
+                      ? "mr-[var(--fab-clear)] sm:mr-[var(--fab-clear)]"
+                      : "mr-[var(--fab-clear)] sm:mr-0"
+                  }
+                />
               ))}
             </div>
           </Reveal>
@@ -203,7 +235,13 @@ export function ResultsSection() {
           <Reveal delay={120}>
             <div className="mt-4 grid gap-4">
               {writtenTestimonials.map((item) => (
-                <WrittenTestimonial key={item.id} item={item} />
+                <WrittenTestimonial
+                  key={item.id}
+                  item={item}
+                  // Full width at every breakpoint below `lg` (no column
+                  // split in this list) — same clearance rationale as above.
+                  contentClassName="pr-[calc(1.5rem+var(--fab-clear))]"
+                />
               ))}
             </div>
           </Reveal>

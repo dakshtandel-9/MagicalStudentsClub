@@ -88,8 +88,16 @@ export function Footer() {
           {/* Divider between the closing pitch and the site index. */}
           <div className="border-line relative border-t" />
 
+          {/* Below `sm` this grid is a single column, so every nav block runs
+              full width and can land behind the fixed WhatsApp/mute/
+              back-to-top column (globals.css, "Clearance for the floating
+              button column") — the brand block and "Contact" block below get
+              their own `pr-[var(--fab-clear)]` directly since they aren't
+              generated from a `.map()`. From `sm` to `lg` it's 2-up, so only
+              the right-hand column (Quick Links, Contact) still needs it;
+              `--fab-clear` resolves to 0 at `lg` and up, where it's 4-up. */}
           <div className="relative grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr] lg:gap-8 lg:py-10">
-          <div>
+          <div className="pr-[var(--fab-clear)] sm:pr-0">
             <Link href="/" className="flex items-center gap-2.5">
               <span className="bg-primary/10 ring-primary/20 text-primary font-display inline-flex size-8 items-center justify-center rounded-lg text-sm font-bold ring-1">
                 M
@@ -114,7 +122,7 @@ export function Footer() {
             </a>
           </div>
 
-          <nav aria-label="Quick links">
+          <nav aria-label="Quick links" className="sm:pr-[var(--fab-clear)]">
             <ColumnHeading>Quick Links</ColumnHeading>
             <ul>
               {footer.quickLinks.map((link) => (
@@ -140,7 +148,13 @@ export function Footer() {
             </ul>
           </nav>
 
-          <div>
+          {/* Right-hand column at every breakpoint below `lg` (2nd of 2 below
+              `sm`, and again the right cell of the `sm`-to-`lg` 2-up row) —
+              its full-width rows carry a phone number/email/address that can
+              land behind the fixed WhatsApp/mute/back-to-top column, see
+              "Clearance for the floating button column" in globals.css.
+              `--fab-clear` resolves to 0 at `lg` and up. */}
+          <div className="pr-[var(--fab-clear)]">
             <ColumnHeading>Contact</ColumnHeading>
             <ul className="space-y-3">
               <li>
@@ -184,12 +198,26 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-line relative flex flex-col items-center justify-between gap-4 border-t py-6 sm:flex-row">
+        {/* The very last row before the card's bottom edge — exactly where
+            the fixed WhatsApp/mute/back-to-top column floor-anchors below
+            `lg` (globals.css, "Clearance for the floating button column").
+            Below `sm` it's a centred column, so extra bottom padding lifts
+            the whole row clear of the buttons' vertical band instead of
+            right-padding (which would push centred text off-centre) — this
+            needs the column's actual *height* (28px bottom-7 + 168px of
+            stacked buttons = 196px), not `--fab-clear` (a width, sized for
+            side-by-side clearance elsewhere, and too little to lift this row
+            above the buttons entirely). From `sm` the row becomes
+            `justify-between` with the legal links on the right, so that
+            `<ul>` takes `--fab-clear` right padding directly instead, same as
+            every other right-column case; `--fab-clear` resolves to 0 at `lg`
+            and up. */}
+        <div className="border-line relative flex flex-col items-center justify-between gap-4 border-t py-6 pb-[196px] sm:flex-row sm:pb-6">
           <p className="text-muted text-xs">
             &copy; {new Date().getFullYear()} Magical Students Club. All rights
             reserved.
           </p>
-          <ul className="flex items-center gap-6">
+          <ul className="flex items-center gap-6 sm:pr-[var(--fab-clear)]">
             {footer.legal.map((link) => (
               <li key={link.label}>
                 <Link

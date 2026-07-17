@@ -20,11 +20,14 @@ const STICKY_TOP_SM_PX = 16;
 const STICKY_TOP_PHONE_PX = 12;
 
 /**
- * Above lg the deck drives the scroll itself — the wheel and key handlers
- * below. Below lg the cards still stack (sticky, rising z-index), but the
- * scroll stays native: a touch gesture cannot be intercepted and re-driven
- * the way a wheel can, so mandatory scroll-snap lands every swipe on a pin
- * instead (see the phone-deck block in globals.css).
+ * The deck drives the scroll itself on every viewport — the wheel, touch and
+ * key handlers below. (An earlier version left phones to native scroll-snap
+ * instead; that was abandoned because Chrome's mandatory-snap resolver
+ * freezes the *whole* scroll container solid the moment any upcoming snap
+ * target's `scroll-snap-align` is `none` — which a "wait until this card's
+ * content is finished" rule needs constantly, on the very next target. CSS
+ * snap cannot express that rule at all, so touch gets the same JS-driven
+ * one-gesture-one-card handling wheel already had.)
  */
 const DESKTOP = "(min-width: 1024px)";
 
@@ -43,6 +46,17 @@ function stickyTopPx(desktop: MediaQueryList, tablet: MediaQueryList) {
  * quickly through the page never feels held back.
  */
 const TRAVEL_MS = 620;
+
+/**
+ * How much of a card's still-unread content one forward gesture reveals,
+ * while that card has not yet been read to the end (see `unreadTail` in the
+ * effect below). Roughly two-thirds of a screen — long enough that reading a
+ * short overflow (a couple of extra lines) takes one gesture, not three or
+ * four; short enough that a hard flick over a long card still steps through
+ * it rather than jumping straight to its end in one motion, which would read
+ * as the deck ignoring the "read it first" rule it exists to enforce.
+ */
+const CARD_READ_STEP_PX = 420;
 
 /**
  * Wheel deltas below this can keep a gesture alive but never start one —
@@ -123,27 +137,31 @@ const StackContext = createContext<Registry | null>(null);
  * other instead of scrolling past.
  *
  * Sticky is inert on browsers that lack it (the cards simply scroll normally).
- * The stack itself works on every viewport; what differs is who drives the
- * scroll. On desktop the wheel handler below owns it. On phones the scroll is
- * native, and two CSS pieces (globals.css, "the phone deck") stand in for the
- * handler: mandatory snap on the sentinels lands every swipe with a card
- * pinned, and each card's own scroller stays shut until its card has pinned —
- * flagged here via `data-stack-pinned` — so a swipe on a still-rising card
- * deals the deck rather than sliding the card's content.
+ * The stack itself works on every viewport, and so does the driver: the wheel
+ * and touch handlers below both funnel into the same `go`/`scrollToCard`
+ * machinery, so a trackpad on desktop and a finger on a phone produce
+ * identical behaviour — one gesture, one card, and a card's own content must
+ * be read to the end before the next card is allowed up.
  *
  * Note: `position: sticky` fails inside any ancestor with `overflow: hidden`.
  * The stack therefore sets no overflow of its own, and globals.css puts
  * `overflow-x: clip` (not `hidden`) on <html>, which contains the decorative
  * glows without creating a scroll container.
  *
- * ## Why the wheel is intercepted
+ * ## Why the gesture is intercepted
  *
  * One gesture must advance exactly one card, whatever its force. CSS scroll-snap
  * cannot promise that: it lets native momentum run its course and only then
  * snaps to whatever target is nearest, so a hard flick sails three cards down
- * and a timid nudge snaps straight back. Here the wheel's *direction* is read
- * and its *magnitude* discarded, so a flick and a nudge do the same thing —
- * advance one card — and the deck advances one card per gesture, always.
+ * and a timid nudge snaps straight back — and, on top of that, cannot express
+ * "wait for this card's content to be read" at all (a card ready to compare
+ * notes: pushing mandatory snap to fake that rule by disabling an upcoming
+ * snap target froze the whole scroll container solid in Chrome — see the
+ * removed `data-stack-snap-hold` machinery in git history if reviving that
+ * idea). So the gesture's *direction* is read and its *magnitude* discarded —
+ * a flick and a nudge do the same thing, either finish the current card's
+ * content or advance one card — and the deck moves exactly one step per
+ * gesture, always, on every input device.
  */
 export function CardStack({ children }: { children: ReactNode }) {
   // Sentinels in DOM order. Each marks where its card comes to rest.
@@ -189,14 +207,117 @@ export function CardStack({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const desktop = window.matchMedia(DESKTOP);
+    const tablet = window.matchMedia(TABLET);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    const onWheel = (e: WheelEvent) => {
-      // Below lg the scroll is native — snap does the parking there.
-      if (!desktop.matches) return;
+    /**
+     * The index of the card currently at the pin: the last sentinel at or above
+     * the pin line. The epsilon absorbs sub-pixel rounding at rest.
+     *
+     * Only honest when the page is at rest. Mid-glide it reports whatever card
+     * the scroll happens to have reached, so the deck reads {@link parked}
+     * instead and keeps this for scrolls it did not itself initiate.
+     */
+    const measuredIndex = () => {
+      const top = stickyTopPx(desktop, tablet);
+      let current = 0;
+      sentinels.current.forEach((el, i) => {
+        if (el.getBoundingClientRect().top <= top + 2) current = i;
+      });
+      return current;
+    };
 
-      // A wheel event inside a scrollable region (a card whose content overflows
-      // on a short screen) belongs to that region, not to the deck.
+    /**
+     * The still-unread tail of card `i`'s own content, in pixels — 0 once it
+     * has been scrolled to the end or has nothing to scroll to begin with.
+     *
+     * A forward gesture must finish a card's own content before it is allowed
+     * to advance the deck to the next card — see the call site in `go` below.
+     * This is the rule CSS scroll-snap could not express (see the block
+     * comment on {@link DESKTOP}): mandatory snap only ever watches sentinel
+     * positions, so it has no notion of "wait until the reader is done", and
+     * — worse, discovered the hard way — Chrome's snap resolver simply
+     * refuses to scroll at all once an upcoming snap target's alignment is
+     * withdrawn to express that wait. Driving the scroll here instead sidesteps
+     * the browser's snap machinery entirely, so nothing depends on it.
+     */
+    const unreadTail = (i: number) => {
+      const card = sentinels.current[i]?.nextElementSibling;
+      const scroller = card?.querySelector<HTMLElement>(
+        "[data-stack-scrollable]",
+      );
+      if (!scroller) return 0;
+      return Math.max(
+        0,
+        scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight,
+      );
+    };
+
+    /** Send the deck `step` cards along (+1 down, -1 up) and then rest. */
+    const go = (step: number) => {
+      // Mid-glide or resting after a landing: not taking instructions.
+      if (locked.current) return;
+
+      const list = sentinels.current;
+      if (!list.length) return;
+
+      // Step from where the deck last *sent* itself, not from where the page
+      // happens to be — see `parked`. Falls back to measuring only when the deck
+      // has not moved itself yet, or when something else moved the page and the
+      // safety net handed control back with no remembered card.
+      const from = parked.current ?? measuredIndex();
+
+      // A forward gesture on a card whose content is not yet fully read scrolls
+      // that content instead of advancing the deck — the tail is walked off by
+      // however much this one gesture is worth, capped at what is left. A
+      // backward gesture is never gated: reading is a one-way requirement, and
+      // gating retreat too would trap a reader who overshot on the way down.
+      if (step > 0) {
+        const tail = unreadTail(from);
+        if (tail > 0) {
+          const card = sentinels.current[from]?.nextElementSibling;
+          const scroller = card?.querySelector<HTMLElement>(
+            "[data-stack-scrollable]",
+          );
+          scroller?.scrollBy({
+            top: Math.min(tail, CARD_READ_STEP_PX),
+            behavior: reduced.matches ? "auto" : "smooth",
+          });
+          return;
+        }
+      }
+
+      const next = from + step;
+      if (next < 0 || next >= list.length) return; // at an end: nowhere to go
+
+      scrollToCard(next);
+    };
+
+    /**
+     * True while `scroller` still has room to move one step further in
+     * direction `dir` (+1 down, -1 up). A gesture over a card's own content is
+     * let through to the browser's native scroll only while this holds —
+     * dragging text down (`dir` +1) once the scroller has hit its end must
+     * fall through to `go` and advance the deck instead of rubber-banding
+     * forever, which is the whole point of the read-it-first rule. Scrolling
+     * back up (`dir` -1) is excused whenever there is anything above to
+     * reveal, mirroring the forward case.
+     */
+    const hasRoom = (scroller: HTMLElement, dir: number) =>
+      dir > 0
+        ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight >
+          1
+        : scroller.scrollTop > 1;
+
+    const onWheel = (e: WheelEvent) => {
+      // A wheel event inside a scrollable region (a card whose content
+      // overflows on a short screen) belongs to that region, not to the deck
+      // — but only while that region still has somewhere left to go in this
+      // direction. Once it has hit its end, the same gesture falls through to
+      // `go` below and is free to advance (or retreat) the deck: without this
+      // a reader whose mouse happens to sit over the text could scroll to the
+      // bottom of a card and then find every further wheel notch swallowed by
+      // a maxed-out scroller that never hands off to the deck.
       //
       // The target is not always an Element — it can be a text node, or `window`
       // itself — so `closest` cannot be called on it blindly. Walk up to the
@@ -208,7 +329,8 @@ export function CardStack({ children }: { children: ReactNode }) {
           : node instanceof Node
             ? node.parentElement
             : null;
-      if (el?.closest("[data-stack-scrollable]")) return;
+      const scroller = el?.closest<HTMLElement>("[data-stack-scrollable]");
+      if (scroller && hasRoom(scroller, e.deltaY > 0 ? 1 : -1)) return;
 
       // The deck owns the wheel: never let the page free-scroll underneath.
       // Every event, however small — the 1–3px momentum drizzle would
@@ -254,39 +376,68 @@ export function CardStack({ children }: { children: ReactNode }) {
       go(dir);
     };
 
-    /**
-     * The index of the card currently at the pin: the last sentinel at or above
-     * the pin line. The epsilon absorbs sub-pixel rounding at rest.
-     *
-     * Only honest when the page is at rest. Mid-glide it reports whatever card
-     * the scroll happens to have reached, so the deck reads {@link parked}
-     * instead and keeps this for scrolls it did not itself initiate.
-     */
-    const measuredIndex = () => {
-      let current = 0;
-      sentinels.current.forEach((el, i) => {
-        if (el.getBoundingClientRect().top <= STICKY_TOP_PX + 2) current = i;
-      });
-      return current;
+    // Touch: the same one-gesture-one-card contract as the wheel, driven from
+    // a drag instead of a wheel delta. A finger's vertical travel since the
+    // last touchmove is fed through the identical threshold/pause/reversal/
+    // surge state machine above (shared refs), so a slow drag and a hard flick
+    // both resolve to exactly one step, and a drag inside a still-reading
+    // card's content is consumed by `go` itself rather than the browser's own
+    // touch-scroll — which is why `touchmove` is not passive here either.
+    let touchY: number | undefined;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchY = e.touches[0]?.clientY;
     };
 
-    /** Send the deck `step` cards along (+1 down, -1 up) and then rest. */
-    const go = (step: number) => {
-      // Mid-glide or resting after a landing: not taking instructions.
-      if (locked.current) return;
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY;
+      if (touchY === undefined || y === undefined) return;
 
-      const list = sentinels.current;
-      if (!list.length) return;
+      // Dragging a finger up moves content up, the same visual direction as a
+      // positive (downward-scrolling) wheel delta — so up-drag maps to +1,
+      // matching `deltaY > 0` in the wheel handler.
+      const dy = touchY - y;
+      touchY = y;
 
-      // Step from where the deck last *sent* itself, not from where the page
-      // happens to be — see `parked`. Falls back to measuring only when the deck
-      // has not moved itself yet, or when something else moved the page and the
-      // safety net handed control back with no remembered card.
-      const from = parked.current ?? measuredIndex();
-      const next = from + step;
-      if (next < 0 || next >= list.length) return; // at an end: nowhere to go
+      const node = e.target as Node | null;
+      const el =
+        node instanceof Element
+          ? node
+          : node instanceof Node
+            ? node.parentElement
+            : null;
+      // Same exclusion as the wheel handler, and the same escape hatch: once
+      // the card's own content has nowhere left to go in this drag's
+      // direction, the touch falls through to `go` instead of rubber-banding
+      // forever against a maxed-out scroller.
+      const scroller = el?.closest<HTMLElement>("[data-stack-scrollable]");
+      if (scroller && hasRoom(scroller, dy > 0 ? 1 : -1)) return;
 
-      scrollToCard(next);
+      e.preventDefault();
+
+      const mag = Math.abs(dy);
+      const now = e.timeStamp;
+      const paused = now - lastWheel.current >= GESTURE_GAP_MS;
+      lastWheel.current = now;
+
+      if (mag < WHEEL_THRESHOLD) {
+        lastMag.current = mag;
+        return;
+      }
+
+      const dir = dy > 0 ? 1 : -1;
+      const reversed = lastDir.current !== 0 && dir !== lastDir.current;
+      const surged = mag >= SURGE_FLOOR && mag > lastMag.current * 2;
+      lastDir.current = dir;
+      lastMag.current = mag;
+
+      if (!paused && !reversed && !surged) return;
+
+      go(dir);
+    };
+
+    const onTouchEnd = () => {
+      touchY = undefined;
     };
 
     /**
@@ -303,7 +454,9 @@ export function CardStack({ children }: { children: ReactNode }) {
       // read that shortfall as "off-pin" and try to correct it forever.
       const max = document.documentElement.scrollHeight - window.innerHeight;
       const to = Math.min(
-        el.getBoundingClientRect().top + window.scrollY - STICKY_TOP_PX,
+        el.getBoundingClientRect().top +
+          window.scrollY -
+          stickyTopPx(desktop, tablet),
         max,
       );
 
@@ -346,8 +499,6 @@ export function CardStack({ children }: { children: ReactNode }) {
     };
 
     const onKey = (e: KeyboardEvent) => {
-      if (!desktop.matches) return;
-
       // Never hijack keys aimed at a control or a text field.
       const el = e.target as HTMLElement | null;
       if (
@@ -379,7 +530,7 @@ export function CardStack({ children }: { children: ReactNode }) {
     // settles off-pin, glide to the nearest card.
     let idle: number | undefined;
     const onScroll = () => {
-      if (!desktop.matches || locked.current) return;
+      if (locked.current) return;
       window.clearTimeout(idle);
       idle = window.setTimeout(() => {
         if (locked.current) return;
@@ -399,11 +550,13 @@ export function CardStack({ children }: { children: ReactNode }) {
           return;
         }
 
+        const top = stickyTopPx(desktop, tablet);
+
         // Nearest sentinel to the pin line, by absolute distance.
         let nearest = 0;
         let best = Infinity;
         list.forEach((el, i) => {
-          const d = Math.abs(el.getBoundingClientRect().top - STICKY_TOP_PX);
+          const d = Math.abs(el.getBoundingClientRect().top - top);
           if (d < best) {
             best = d;
             nearest = i;
@@ -430,24 +583,24 @@ export function CardStack({ children }: { children: ReactNode }) {
     // The trip home crosses the whole deck rather than one card, so it is given
     // a longer glide; at the one-card speed it would be a lurch.
     const onHome = () => {
-      if (!desktop.matches) {
-        // Below lg there is no deck — just go.
-        window.scrollTo({
-          top: 0,
-          behavior: reduced.matches ? "auto" : "smooth",
-        });
-        return;
-      }
       scrollToCard(0, HOME_TRAVEL_MS);
     };
 
     // Not passive: the handlers must be able to preventDefault the page scroll.
     window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
     window.addEventListener("keydown", onKey);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener(STACK_HOME_EVENT, onHome);
     return () => {
       window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener(STACK_HOME_EVENT, onHome);
@@ -458,9 +611,9 @@ export function CardStack({ children }: { children: ReactNode }) {
 
   return (
     <StackContext.Provider value={registry}>
-      {/* `data-card-stack` scopes the phone-deck CSS (snap + gated scrollers)
-          to pages that actually have a deck — the flowing inner pages must
-          never have their scrolling touched. */}
+      {/* `data-card-stack` scopes the x-axis clip in globals.css to pages that
+          actually have a deck — the flowing inner pages must never have
+          their scrolling touched. */}
       <div data-card-stack className="lg:relative">
         {children}
       </div>
@@ -544,11 +697,6 @@ export function StackItem({
           const entry = entries[entries.length - 1];
           const pinned = entry.boundingClientRect.top <= boundary;
 
-          // Gates the card's own scroller on phones: until the card has
-          // pinned, a swipe on it must deal the deck, not slide the card's
-          // content. The CSS lives in globals.css ("the phone deck").
-          card.toggleAttribute("data-stack-pinned", pinned);
-
           // The glow douse — hero exempt (see `parks` above).
           if (parks) card.toggleAttribute("data-parked", pinned);
         },
@@ -570,26 +718,13 @@ export function StackItem({
 
   return (
     <>
-      {/* Marks where this card comes to rest: the deck scrolls to it, and the
+      {/* Marks where this card comes to rest: the deck scrolls to it (on every
+          viewport now — see the touch handling in CardStack), and the
           observer above watches it to know when the card has parked. The card
           itself can do neither job — once parked it is sticky and has stopped
           moving with the scroller. Zero-height so it measures a position, not
-          an area.
-
-          On phones it is also the card's snap point: the deck's snap container
-          (globals.css) only exists below lg, so `snap-start`/`snap-always` are
-          inert on desktop, where the wheel handler drives instead. The snap
-          target must be this sentinel and never the card — a stuck sticky box
-          rides at the pin for its whole range, so a snap position computed
-          from it would be satisfied by *every* scroll offset in that range and
-          mandatory snap would stop meaning anything. `snap-always` caps the
-          hardest flick at one card; `scroll-mt` matches the pin offsets, so
-          snapping and sticking agree about where "parked" is. */}
-      <div
-        ref={sentinelRef}
-        aria-hidden
-        className="h-0 snap-start snap-always scroll-mt-3 sm:scroll-mt-4"
-      />
+          an area. */}
+      <div ref={sentinelRef} aria-hidden className="h-0" />
       <div
         ref={cardRef}
         // Pins just below the top of the viewport, so a stuck card keeps a strip

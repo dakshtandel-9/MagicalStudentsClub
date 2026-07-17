@@ -73,10 +73,13 @@ export function HeroSection() {
           <div className="order-2 lg:order-1">
             {/* Four deliberate lines: the WHAT/HOW contrast has to land on its
                 own line for the antithesis to read. The phone size is clamped
-                against the viewport so the longest line ("Schools tell your
-                child") never wraps and breaks the four-line lockup on a
-                narrow screen. */}
-            <h1 className="font-display text-ink text-[clamp(1.5rem,7vw,2.1rem)] leading-[1.12] font-bold sm:text-[2.75rem] lg:text-[3.25rem]">
+                against the *available* width, not the viewport, so the
+                longest line ("Schools tell your child") never wraps and
+                breaks the four-line lockup — the column is narrower than the
+                viewport by the floating button column's reserved clearance
+                (globals.css), so the fluid term is tuned against that
+                narrower column, not a bare vw. */}
+            <h1 className="font-display text-ink text-[clamp(1.3rem,6vw,2.1rem)] leading-[1.12] font-bold sm:text-[2.75rem] lg:text-[3.25rem]">
               <span className="block">Schools tell your child</span>
               <span className="block">
                 <span className="text-muted">WHAT</span> to study.
@@ -87,7 +90,14 @@ export function HeroSection() {
               </span>
             </h1>
 
-            <p className="text-muted mt-4 max-w-xl text-[15px] leading-relaxed text-pretty sm:mt-6 sm:text-base">
+            {/* `pr-[var(--fab-clear)]` below `lg`: this paragraph runs the
+                full width of its column, so its last line or two can land
+                right where the fixed WhatsApp/mute/back-to-top column sits
+                once the hero's own content is scrolled — see "Clearance for
+                the floating button column" in globals.css. Reset at `lg`
+                since the deck's centred column already clears that corner
+                there. */}
+            <p className="text-muted mt-4 max-w-xl pr-[var(--fab-clear)] text-[15px] leading-relaxed text-pretty sm:mt-6 sm:text-base lg:pr-0">
               {hero.supporting}
             </p>
 
@@ -129,15 +139,17 @@ export function HeroSection() {
                 viewport so a short screen shrinks the portrait instead of
                 pushing the stats bar out through the card's bottom edge.
 
-                The phone cap is the tighter 30dvh: the first screen of the
-                card has to hold the nav, the portrait AND the whole four-line
-                headline — face and thesis together — with the rest arriving
-                on the card's own scroll. Below lg the cap sits on the image
-                itself, not this wrapper: `max-h-full` on the image cannot
-                resolve against a wrapper whose own height is auto, so a
-                wrapper-only cap lets the image spill past it and crop into
-                the nav. */}
-            <div className="relative mx-auto flex max-w-[300px] items-end justify-center sm:max-w-[400px] lg:max-h-[42vh] lg:max-w-[440px]">
+                Below lg the hero's own content scroll is gated (see the phone
+                deck in globals.css) rather than free — a card only advances
+                once its content is read to the end — so the first screen no
+                longer has to fit the whole hero at once, and the portrait can
+                run larger: 46dvh/50dvh rather than the tighter 30/38 it needed
+                back when everything had to land above the fold. The cap sits
+                on the image itself, not this wrapper: `max-h-full` on the
+                image cannot resolve against a wrapper whose own height is
+                auto, so a wrapper-only cap lets the image spill past it and
+                crop into the nav. */}
+            <div className="relative mx-auto flex max-w-[360px] items-end justify-center sm:max-w-[440px] lg:max-h-[42vh] lg:max-w-[440px]">
               {/* The source cutout is square and ends in a flat bottom edge.
                   Fade the last strip out so it dissolves into the page instead
                   of stopping on a hard horizontal line. */}
@@ -147,8 +159,8 @@ export function HeroSection() {
                 width={500}
                 height={500}
                 priority
-                sizes="(max-width: 1024px) 400px, 480px"
-                className="h-auto max-h-[30dvh] w-full object-contain sm:max-h-[38dvh] lg:max-h-full [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
+                sizes="(max-width: 1024px) 440px, 480px"
+                className="h-auto max-h-[46dvh] w-full object-contain sm:max-h-[50dvh] lg:max-h-full [mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)] [-webkit-mask-image:linear-gradient(to_bottom,black_62%,transparent_92%)]"
               />
 
               {/* Experience callout, clear of the portrait's lower edge. */}

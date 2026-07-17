@@ -53,12 +53,24 @@ export function CoachSection() {
 
           <Reveal delay={80}>
             <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:mt-12">
-              {coach.credibility.map((point) => (
+              {coach.credibility.map((point, i) => (
                 <Card
                   key={point.text}
                   as="li"
                   className="list-none"
-                  contentClassName="flex items-center gap-3 p-5"
+                  contentClassName={[
+                    "flex items-center gap-3 p-5",
+                    // Below `lg`, whichever card actually borders the card's
+                    // right edge reserves the fixed WhatsApp/mute/back-to-top
+                    // column's width, so its label never scrolls in
+                    // underneath the buttons (globals.css, "Clearance for the
+                    // floating button column"). Below `sm` this grid is a
+                    // single column — every card is that right-hand edge; from
+                    // `sm` it's two-up, so only the odd (right-column) cards
+                    // need it, and at `lg` the reserved width is 0 anyway.
+                    "pr-[calc(1.25rem+var(--fab-clear))] sm:pr-5",
+                    i % 2 === 1 ? "sm:pr-[calc(1.25rem+var(--fab-clear))]" : "",
+                  ].join(" ")}
                 >
                   <Icon
                     name={point.icon as IconName}

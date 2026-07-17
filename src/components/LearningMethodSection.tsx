@@ -31,7 +31,16 @@ export function LearningMethodSection() {
 
             {/* Neon brain fills the empty right half, clear of the 5R column.
                 The drop-shadows stack into a pink halo around the strokes —
-                a box-shadow would glow the element's rect, not the artwork. */}
+                a box-shadow would glow the element's rect, not the artwork.
+
+                Below `sm` the card itself has less room than it used to (the
+                floating button column's reserved clearance, globals.css,
+                narrows every card on phone) — a fixed `w-56` at the card's
+                new width ran the brain straight through the 5R list instead
+                of sitting clear beside it. `w-28` holds the same position but
+                small enough to actually fit the leftover width next to a
+                `max-w-[58%]` list column at that size; `sm:w-56` restores the
+                original brain once the card has room for it again. */}
             <Image
               aria-hidden
               src="/images/brain-neon.png"
@@ -39,7 +48,7 @@ export function LearningMethodSection() {
               width={900}
               height={870}
               priority={false}
-              className="pointer-events-none absolute top-[58%] right-2 w-56 -translate-y-1/2 opacity-90 select-none sm:w-72 lg:w-80"
+              className="pointer-events-none absolute top-[58%] right-2 w-20 -translate-y-1/2 opacity-90 select-none sm:w-56 lg:w-80"
               style={{
                 filter:
                   "drop-shadow(0 0 6px rgba(232,62,140,0.55)) drop-shadow(0 0 22px rgba(232,62,140,0.4)) drop-shadow(0 0 48px rgba(232,62,140,0.25))",
@@ -54,7 +63,7 @@ export function LearningMethodSection() {
 
               {/* The recall spine, vertical: dotted between steps, solid nodes.
                   Width is capped so the labels never run under the brain. */}
-              <ol className="mt-7 max-w-[58%] space-y-0">
+              <ol className="mt-7 max-w-[50%] space-y-0 sm:max-w-[58%]">
                 {fiveR.map((r, i) => (
                   <li key={r} className="relative flex items-center gap-4 pb-6 last:pb-0">
                     {i !== fiveR.length - 1 ? (
@@ -98,7 +107,17 @@ export function LearningMethodSection() {
               {learningSteps.map((step, i) => (
                 <li
                   key={step.label}
-                  className="group relative flex flex-col items-center text-center lg:flex-1"
+                  // Below `lg` this is a 2- or 3-up CSS grid, so whichever
+                  // step lands in the rightmost column of a row can end up
+                  // scrolled behind the fixed WhatsApp/mute/back-to-top column
+                  // (globals.css, "Clearance for the floating button column").
+                  // `nth-child` targets that column directly (2n for the
+                  // 2-up grid below `sm`, 3n for the 3-up grid from `sm` to
+                  // `lg`) rather than trusting index arithmetic against a
+                  // list whose last row may not fill every column.
+                  // `--fab-clear` itself resolves to 0 at `lg` and up
+                  // (globals.css), so no `lg:` override is needed here.
+                  className="group relative flex flex-col items-center text-center [&:nth-child(2n)]:pr-[var(--fab-clear)] sm:[&:nth-child(2n)]:pr-0 sm:[&:nth-child(3n)]:pr-[var(--fab-clear)] lg:flex-1"
                 >
                   {i !== learningSteps.length - 1 ? (
                     <span

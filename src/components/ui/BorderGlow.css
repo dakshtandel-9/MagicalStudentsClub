@@ -181,3 +181,18 @@
     display: none;
   }
 }
+
+/* Touch devices get the flat card too — there is no pointer to track, so the
+   effect never lights. This is not merely thrift: `.edge-light` is inset
+   negatively and still *lays out* past every card edge even while invisible.
+   On a phone that widens the mobile layout viewport (375 → 423 on an iPhone
+   SE), which both invites a sideways pan and drags every `position: fixed`
+   control off the bottom-right corner with it, since fixed boxes anchor to
+   the layout viewport. Removed, the page lays out exactly one screen wide. */
+@media (hover: none) {
+  .border-glow-card::before,
+  .border-glow-card::after,
+  .border-glow-card > .edge-light {
+    display: none;
+  }
+}

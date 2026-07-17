@@ -76,17 +76,26 @@ export function FeatureCard({
   icon,
   title,
   body,
+  contentClassName,
 }: {
   icon: IconName;
   title: string;
   body: string;
+  /** Appended to the base `p-6`, e.g. so a caller in a grid can add extra
+   * right clearance on whichever cards land in the rightmost column. */
+  contentClassName?: string;
 }) {
   // `h-full`: in a grid the card fills its row rather than shrinking to its own
   // text, so a two-line body and a three-line one leave cards the same height.
   // This only works if every wrapper between the grid and the card is also full
   // height — see the Reveal wrappers at the call sites.
   return (
-    <Card hover as="article" className="h-full" contentClassName="p-6">
+    <Card
+      hover
+      as="article"
+      className="h-full"
+      contentClassName={["p-6", contentClassName].filter(Boolean).join(" ")}
+    >
       <IconChip name={icon} />
       <h3 className="text-ink mt-5 text-lg font-semibold">{title}</h3>
       <p className="text-muted mt-2 text-[15px] leading-relaxed">{body}</p>
