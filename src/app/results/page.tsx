@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { ArrowRight } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
 import { resultsPage, whatsappHref } from "@/content/site";
 import { PageHeader, PageShell } from "@/components/PageShell";
 import { ButtonLink } from "@/components/ui/Button";
@@ -8,11 +8,18 @@ import type { IconName } from "@/components/ui/Icon";
 import { Container, Section } from "@/components/ui/Section";
 import { Mark, SectionHeading } from "@/components/ui/SectionHeading";
 
-export const metadata: Metadata = {
-  title: "Results | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Student Results — Academic Excellence & Exam Success",
   description:
-    "Real results from students who learned how to learn — academic improvements, better recall, and verified rank holders.",
-};
+    "Real results from students who learned how to learn — academic improvements, better retention and recall, and verified rank holders in competitive exams.",
+  path: "/results",
+  keywords: [
+    "Academic Excellence Program",
+    "Student Success Program",
+    "Exam Preparation Skills",
+    "Memory Training for Students",
+  ],
+});
 
 export default function ResultsPage() {
   return (

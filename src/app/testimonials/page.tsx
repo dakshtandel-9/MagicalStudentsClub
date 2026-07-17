@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { Play, Quote, Star } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
 import Image from "next/image";
 import {
   testimonialsPage,
@@ -11,11 +11,17 @@ import { Card } from "@/components/ui/Card";
 import { Container, Section } from "@/components/ui/Section";
 import { Mark, SectionHeading } from "@/components/ui/SectionHeading";
 
-export const metadata: Metadata = {
-  title: "Testimonials | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Student & Parent Testimonials",
   description:
-    "What parents, students and competitive exam aspirants say about learning with Magical Students Club.",
-};
+    "What parents, students and competitive exam aspirants say about memory training and study skills coaching at Magical Students Club.",
+  path: "/testimonials",
+  keywords: [
+    "Memory Training for Students",
+    "Student Success Program",
+    "Magical Students Club",
+  ],
+});
 
 function VideoTestimonial({ item }: { item: (typeof videoTestimonials)[number] }) {
   if (item.placeholder || !item.youtubeId) {

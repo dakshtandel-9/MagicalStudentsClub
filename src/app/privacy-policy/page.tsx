@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
 import { contact, legalPage } from "@/content/site";
+import { pageMetadata } from "@/lib/seo";
 import { PageHeader, PageShell } from "@/components/PageShell";
 import { Container, Section } from "@/components/ui/Section";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
   description: "How Magical Students Club collects, uses and protects your information.",
-};
+  path: "/privacy-policy",
+});
 
 const h2 = "text-ink mt-10 text-xl font-semibold first:mt-0";
 const p = "text-muted mt-3 text-[15px] leading-relaxed text-pretty";

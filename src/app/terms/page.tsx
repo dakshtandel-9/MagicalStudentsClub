@@ -1,12 +1,13 @@
-import type { Metadata } from "next";
 import { contact, legalPage } from "@/content/site";
+import { pageMetadata } from "@/lib/seo";
 import { PageHeader, PageShell } from "@/components/PageShell";
 import { Container, Section } from "@/components/ui/Section";
 
-export const metadata: Metadata = {
-  title: "Terms & Conditions | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Terms & Conditions",
   description: "Terms and conditions for using the Magical Students Club website and programs.",
-};
+  path: "/terms",
+});
 
 const h2 = "text-ink mt-10 text-xl font-semibold first:mt-0";
 const p = "text-muted mt-3 text-[15px] leading-relaxed text-pretty";

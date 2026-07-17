@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { AtSign, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
 import { contact, contactPage, telHref, whatsappHref } from "@/content/site";
 import { ContactForm } from "@/components/ContactForm";
 import { PageHeader, PageShell } from "@/components/PageShell";
@@ -7,11 +7,17 @@ import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
 import { WhatsAppGlyph } from "@/components/ui/WhatsAppGlyph";
 
-export const metadata: Metadata = {
-  title: "Contact | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Contact Our Memory Training Institute in Bengaluru",
   description:
-    "Reach Magical Students Club on WhatsApp, phone, or email, or visit us in Bengaluru.",
-};
+    "Reach Magical Students Club on WhatsApp, phone or email, or visit our memory training institute in Bengaluru. Open 10 AM–5 PM.",
+  path: "/contact",
+  keywords: [
+    "Memory Training Institute",
+    "Memory Workshop",
+    "Magical Students Club",
+  ],
+});
 
 const detailClass =
   "text-muted hover:text-ink flex items-start gap-3 text-[15px] transition-colors";

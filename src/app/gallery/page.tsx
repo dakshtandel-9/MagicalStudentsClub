@@ -1,14 +1,20 @@
-import type { Metadata } from "next";
 import { galleryPage } from "@/content/site";
+import { pageMetadata } from "@/lib/seo";
 import { GalleryGrid } from "@/components/GalleryGrid";
 import { PageHeader, PageShell } from "@/components/PageShell";
 import { Section } from "@/components/ui/Section";
 
-export const metadata: Metadata = {
-  title: "Gallery | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Memory Workshop & Training Gallery",
   description:
-    "Workshops, academy sessions, events, media coverage and videos from Magical Students Club.",
-};
+    "Photos and videos from memory workshops, academy sessions, events and media coverage of Magical Students Club.",
+  path: "/gallery",
+  keywords: [
+    "Memory Workshop",
+    "Memory Training Institute",
+    "Brain Training for Students",
+  ],
+});
 
 export default function GalleryPage() {
   return (

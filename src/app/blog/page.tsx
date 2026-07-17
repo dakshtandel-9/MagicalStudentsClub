@@ -1,15 +1,23 @@
-import type { Metadata } from "next";
 import { Newspaper } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
 import { blogPage } from "@/content/site";
 import { PageHeader, PageShell } from "@/components/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Section } from "@/components/ui/Section";
 
-export const metadata: Metadata = {
-  title: "Blog | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Memory Techniques & Study Skills Blog",
   description:
-    "Practical reads on memory techniques, study skills, exam preparation, parenting, and speed reading.",
-};
+    "Practical reads on memory techniques for students, study skills, exam preparation, speed reading and parenting — how to study, not just what to study.",
+  path: "/blog",
+  keywords: [
+    "Memory Techniques for Students",
+    "Study Skills for Students",
+    "Learning Skills for Students",
+    "Exam Preparation Skills",
+    "Speed Reading Course",
+  ],
+});
 
 export default function BlogPage() {
   return (

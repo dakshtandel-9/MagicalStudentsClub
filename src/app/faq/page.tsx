@@ -1,20 +1,27 @@
-import type { Metadata } from "next";
 import { ArrowRight, Minus, Plus } from "lucide-react";
+import { pageMetadata, JsonLd, faqJsonLd } from "@/lib/seo";
 import { faqPage, whatsappHref } from "@/content/site";
 import { PageHeader, PageShell } from "@/components/PageShell";
 import { BorderGlow } from "@/components/ui/BorderGlow";
 import { ButtonLink } from "@/components/ui/Button";
 import { Container, Section } from "@/components/ui/Section";
 
-export const metadata: Metadata = {
-  title: "FAQ | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Memory Training FAQ for Parents & Students",
   description:
-    "Answers to common questions about our programs, grouped for parents, competitive exam aspirants, and enrollment.",
-};
+    "Answers about our memory training programs — age groups, online and hybrid learning, competitive exam preparation, fees and enrollment.",
+  path: "/faq",
+  keywords: [
+    "Memory Training for Students",
+    "Memory Improvement Course",
+    "Exam Preparation Skills",
+  ],
+});
 
 export default function FAQPage() {
   return (
     <PageShell>
+      <JsonLd data={faqJsonLd} />
       <PageHeader
         eyebrow={faqPage.eyebrow}
         title={faqPage.heading}

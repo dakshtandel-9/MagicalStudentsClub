@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
+import {
+  JsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  seoKeywords,
+  siteName,
+  siteUrl,
+} from "@/lib/seo";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,19 +23,55 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
+const defaultTitle = "Memory Training & Study Skills for Students | Magical Students Club";
+const defaultDescription =
+  "Memory training for students — memory techniques, speed reading, concentration and study skills for Grade 5+ and competitive exam aspirants (UPSC, NEET, JEE, SSC, Banking). Study smart, not hard, with memory coach Pradeep Acharya.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://magicalstudentsclub.com"),
-  title: "Magical Students Club — We teach students how to study",
-  description:
-    "Memory techniques, speed reading, concentration, and smarter study strategies for Grade 5+ students and competitive exam aspirants. Led by memory coach Pradeep Acharya.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: defaultTitle,
+    template: `%s | ${siteName}`,
+  },
+  description: defaultDescription,
+  keywords: [...seoKeywords],
+  applicationName: siteName,
+  category: "education",
+  authors: [{ name: "Pradeep Acharya" }],
+  creator: siteName,
+  publisher: siteName,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
-    title: "Magical Students Club — We teach students how to study",
-    description:
-      "Memory techniques, speed reading, concentration, and smarter study strategies for Grade 5+ students and competitive exam aspirants.",
-    url: "https://magicalstudentsclub.com",
-    siteName: "Magical Students Club",
-    locale: "en_IN",
     type: "website",
+    url: siteUrl,
+    siteName,
+    locale: "en_IN",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [
+      {
+        url: "/images/logoMSC.png",
+        width: 1061,
+        height: 1046,
+        alt: `${siteName} logo`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: ["/images/logoMSC.png"],
   },
 };
 
@@ -41,7 +85,11 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${spaceGrotesk.variable} h-full`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <JsonLd data={organizationJsonLd} />
+        <JsonLd data={webSiteJsonLd} />
+        {children}
+      </body>
     </html>
   );
 }

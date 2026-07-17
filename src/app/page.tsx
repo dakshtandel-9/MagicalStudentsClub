@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HeroSection } from "@/components/HeroSection";
 import { ChallengesSection } from "@/components/ChallengesSection";
 import { LearningMethodSection } from "@/components/LearningMethodSection";
@@ -14,6 +15,11 @@ import {
   SectionAudioPlayer,
   NarrationSection,
 } from "@/components/SectionAudioPlayer";
+
+/** Title, description and Open Graph inherit the root layout's defaults. */
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 /**
  * The page scrolls as a deck: each card pins near the top of the viewport while

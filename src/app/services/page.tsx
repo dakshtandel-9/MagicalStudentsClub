@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { ArrowRight, Check } from "lucide-react";
+import { pageMetadata, JsonLd, coursesJsonLd } from "@/lib/seo";
 import {
   programs,
   hybridModel,
@@ -14,15 +14,25 @@ import { Container, Section } from "@/components/ui/Section";
 import { Mark, SectionHeading } from "@/components/ui/SectionHeading";
 import { BorderGlow } from "@/components/ui/BorderGlow";
 
-export const metadata: Metadata = {
-  title: "Services | Magical Students Club",
+export const metadata = pageMetadata({
+  title: "Memory Improvement Courses & Programs for Students",
   description:
-    "Memory Mastery Workshop, Hybrid Learning Program and Competitive Exam Track — programs built to teach students how to learn, not just what to study.",
-};
+    "Memory Mastery Workshop, Hybrid Learning Program and Competitive Exam Track — memory improvement courses that teach students how to learn, from Grade 5 to UPSC, NEET, JEE, SSC and Banking prep.",
+  path: "/services",
+  keywords: [
+    "Memory Improvement Course",
+    "Memory Workshop",
+    "Speed Reading Course",
+    "Brain Training for Students",
+    "Student Success Program",
+    "Memory Training for Students",
+  ],
+});
 
 export default function ServicesPage() {
   return (
     <PageShell>
+      <JsonLd data={coursesJsonLd} />
       <PageHeader
         eyebrow={servicesPage.eyebrow}
         title={servicesPage.heading}
